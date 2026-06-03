@@ -11,7 +11,7 @@ type ChampionSelectProps = {
 export function ChampionSelect({ value, onChange, unavailableIds = new Set(), placeholder = 'Select champion' }: ChampionSelectProps) {
   return (
     <select
-      className="w-full rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm text-slate-100 shadow-sm focus:border-[#FFC300] focus:outline-none"
+      className="w-full rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm text-slate-100 shadow-sm focus:border-[#03b4fb] focus:outline-none"
       value={value ?? ''}
       onChange={(event) => onChange(event.target.value || null)}
     >
@@ -50,7 +50,7 @@ export function ChampionSearchInput({ value, onChange, placeholder = 'Search cha
   return (
     <>
       <input
-        className="w-full rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#FFC300] focus:outline-none"
+        className="w-full rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#03b4fb] focus:outline-none"
         list={listId}
         value={query}
         onChange={(event) => chooseChampion(event.target.value)}

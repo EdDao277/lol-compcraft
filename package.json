@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "fetch:champions": "tsx scripts/fetchChampions.ts",
-    "stats:synergy": "tsx scripts/statsPipeline/runSynergyPipeline.ts"
+    "stats:synergy": "tsx scripts/statsPipeline/runSynergyPipeline.ts",
+    "stats:personal-network": "tsx scripts/statsPipeline/runNetworkPipeline.ts personal",
+    "stats:general-network": "tsx scripts/statsPipeline/runNetworkPipeline.ts general",
+    "seed:metadata": "tsx scripts/seedChampionMetadata.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

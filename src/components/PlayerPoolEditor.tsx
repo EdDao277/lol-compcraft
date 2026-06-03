@@ -38,8 +38,8 @@ export function PlayerPoolEditor({ players, onChange }: Props) {
         {players.map((player) => (
           <div key={player.id} className="rounded-lg border border-[#003566] bg-[#000814]/70 p-3">
             <div className="grid gap-2 sm:grid-cols-2">
-              <input className="rounded border border-[#003566] bg-[#000814] px-2 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#FFC300] focus:outline-none" value={player.name} onChange={(event) => updatePlayer(player.id, { name: event.target.value })} placeholder="Player name" />
-              <select className="rounded border border-[#003566] bg-[#000814] px-2 py-2 text-sm text-slate-100 focus:border-[#FFC300] focus:outline-none" value={player.primaryRole} onChange={(event) => updatePlayer(player.id, { primaryRole: event.target.value as Role })}>
+              <input className="rounded border border-[#003566] bg-[#000814] px-2 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#03b4fb] focus:outline-none" value={player.name} onChange={(event) => updatePlayer(player.id, { name: event.target.value })} placeholder="Player name" />
+              <select className="rounded border border-[#003566] bg-[#000814] px-2 py-2 text-sm text-slate-100 focus:border-[#03b4fb] focus:outline-none" value={player.primaryRole} onChange={(event) => updatePlayer(player.id, { primaryRole: event.target.value as Role })}>
                 {roles.map((role) => (
                   <option key={role}>{role}</option>
                 ))}
@@ -56,7 +56,7 @@ export function PlayerPoolEditor({ players, onChange }: Props) {
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <ChampionSearchInput value={entry.championId} onChange={(value) => updatePoolEntry(player.id, index, 'championId', value)} />
-                      <select className="rounded border border-[#003566] bg-[#000814] px-2 py-2 text-slate-100 focus:border-[#FFC300] focus:outline-none" value={entry.role} onChange={(event) => updatePoolEntry(player.id, index, 'role', event.target.value)}>
+                      <select className="rounded border border-[#003566] bg-[#000814] px-2 py-2 text-slate-100 focus:border-[#03b4fb] focus:outline-none" value={entry.role} onChange={(event) => updatePoolEntry(player.id, index, 'role', event.target.value)}>
                         {roles.map((role) => (
                           <option key={role}>{role}</option>
                         ))}
@@ -64,7 +64,7 @@ export function PlayerPoolEditor({ players, onChange }: Props) {
                     </div>
                     <ScoreFields playerId={player.id} index={index} entry={entry} onChange={updatePoolEntry} />
                     <button
-                      className="rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm font-medium text-slate-200 hover:border-[#FFC300]"
+                      className="rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm font-medium text-slate-200 hover:border-[#03b4fb]"
                       onClick={() => updatePlayer(player.id, { championPool: player.championPool.filter((_, entryIndex) => entryIndex !== index) })}
                     >
                       Remove
@@ -75,7 +75,7 @@ export function PlayerPoolEditor({ players, onChange }: Props) {
             </div>
 
             <button
-              className="mt-3 rounded bg-[#FFC300] px-3 py-2 text-sm font-black text-[#000814] hover:bg-[#FFD60A]"
+              className="mt-3 rounded bg-[#03b4fb] px-3 py-2 text-sm font-black text-[#000814] hover:bg-[#38c8ff]"
               onClick={() =>
                 updatePlayer(player.id, {
                   championPool: [
@@ -111,7 +111,7 @@ function ScoreFields({
         <label key={field} className="text-xs text-slate-400">
           comfort
           <input
-            className="mt-1 w-full rounded border border-[#003566] bg-[#000814] px-2 py-1 text-slate-100 focus:border-[#FFC300] focus:outline-none"
+            className="mt-1 w-full rounded border border-[#003566] bg-[#000814] px-2 py-1 text-slate-100 focus:border-[#03b4fb] focus:outline-none"
             type="number"
             min="1"
             max="10"

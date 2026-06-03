@@ -1,4 +1,4 @@
-import type { MatchDetail, NormalizedRole, ProcessedTeam } from './types';
+import type { MatchDetail, NormalizedRole, ProcessedTeam, SynergySourceType } from './types';
 
 const positionToRole: Record<string, NormalizedRole | undefined> = {
   TOP: 'Top',
@@ -23,7 +23,16 @@ function normalizeChampionId(championName: string) {
   return championIdAliases[championName] ?? championName;
 }
 
-export function processMatches(matches: MatchDetail[]) {
+export type ProcessMatchesContext = {
+  region?: string;
+  sourceType?: SynergySourceType;
+};
+
+export function getPatchFromMatch(match: MatchDetail) {
+  return match.info.gameVersion?.split('.').slice(0, 2).join('.') || 'unknown';
+}
+
+export function processMatches(matches: MatchDetail[], context: ProcessMatchesContext = {}) {
   const teams: ProcessedTeam[] = [];
 
   for (const match of matches) {
@@ -50,6 +59,10 @@ export function processMatches(matches: MatchDetail[]) {
         matchId: match.metadata.matchId,
         teamId,
         win: teamParticipants.some((participant) => participant.win),
+        patch: getPatchFromMatch(match),
+        region: context.region ?? 'unknown',
+        queueId: match.info.queueId,
+        sourceType: context.sourceType ?? 'personal',
         participants: teamParticipants,
       });
     }

@@ -35,7 +35,7 @@ export function EnemyPoolEditor({ enemyPools, onChange }: Props) {
                   <h3 className="font-semibold">Enemy {role}</h3>
                   <p className="text-xs uppercase tracking-wide text-slate-500">{role}</p>
                 </div>
-                <button className="rounded bg-[#FFC300] px-3 py-2 text-sm font-black text-[#000814] hover:bg-[#FFD60A]" onClick={() => addChampion(role)}>
+                <button className="rounded bg-[#03b4fb] px-3 py-2 text-sm font-black text-[#000814] hover:bg-[#38c8ff]" onClick={() => addChampion(role)}>
                   Add champion
                 </button>
               </div>
@@ -53,7 +53,7 @@ export function EnemyPoolEditor({ enemyPools, onChange }: Props) {
                       <label className="text-xs text-slate-400">
                         threat
                         <input
-                          className="mt-1 w-full rounded border border-[#003566] bg-[#000814] px-2 py-1 text-slate-100 focus:border-[#FFC300] focus:outline-none"
+                          className="mt-1 w-full rounded border border-[#003566] bg-[#000814] px-2 py-1 text-slate-100 focus:border-[#03b4fb] focus:outline-none"
                           type="number"
                           min="1"
                           max="10"
@@ -61,7 +61,7 @@ export function EnemyPoolEditor({ enemyPools, onChange }: Props) {
                           onChange={(event) => updateEntry(entry.id, 'threatScore', Number(event.target.value))}
                         />
                       </label>
-                      <button className="rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm font-medium text-slate-200 hover:border-[#FFC300]" onClick={() => onChange(enemyPools.filter((item) => item.id !== entry.id))}>
+                      <button className="rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm font-medium text-slate-200 hover:border-[#03b4fb]" onClick={() => onChange(enemyPools.filter((item) => item.id !== entry.id))}>
                         Remove
                       </button>
                     </div>

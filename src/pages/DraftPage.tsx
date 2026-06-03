@@ -7,6 +7,7 @@ import { createInitialDraftState } from '../logic/draftUtils';
 import { recommendBans } from '../logic/recommendBans';
 import { recommendPicks } from '../logic/recommendPicks';
 import { getSynergyStats } from '../services/championSynergyStatsService';
+import { getNetworkStats, type NetworkStats } from '../services/networkStatsService';
 import { getSupabaseStatus, type SupabaseStatus } from '../services/supabaseStatusService';
 import { createBlankPlayers, loadTeamPlayersOrMock, saveTeamPlayersToSupabase } from '../services/teamDataService';
 import type { ChampionSynergyStatsRow } from '../types/database';
@@ -26,9 +27,13 @@ export function DraftPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [synergyStats, setSynergyStats] = useState<ChampionSynergyStatsRow[]>([]);
+  const [networkStats, setNetworkStats] = useState<NetworkStats>({ roleStats: [], matchupStats: [], teamCompSignatureStats: [] });
 
-  const pickRecommendations = useMemo(() => recommendPicks(draft, players, enemyPools, synergyStats), [draft, players, enemyPools, synergyStats]);
-  const banRecommendations = useMemo(() => recommendBans(draft, players, enemyPools), [draft, players, enemyPools]);
+  const pickRecommendations = useMemo(
+    () => recommendPicks(draft, players, enemyPools, synergyStats, networkStats.roleStats, networkStats.matchupStats),
+    [draft, players, enemyPools, synergyStats, networkStats],
+  );
+  const banRecommendations = useMemo(() => recommendBans(draft, players, enemyPools, networkStats.matchupStats), [draft, players, enemyPools, networkStats.matchupStats]);
 
   useEffect(() => {
     let isMounted = true;
@@ -47,8 +52,11 @@ export function DraftPage() {
         if (result.source === 'mock') {
           setSupabaseStatus('local');
         } else {
-          const stats = await getSynergyStats();
-          if (isMounted) setSynergyStats(stats);
+          const [stats, loadedNetworkStats] = await Promise.all([getSynergyStats(), getNetworkStats()]);
+          if (isMounted) {
+            setSynergyStats(stats);
+            setNetworkStats(loadedNetworkStats);
+          }
         }
       }
     }
@@ -109,12 +117,12 @@ export function DraftPage() {
       ) : (
         <div className="mx-auto grid min-h-screen max-w-[1500px] gap-5 px-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#003566] bg-[#001D3D] px-4 py-3">
-            <h1 className="text-2xl font-black tracking-wide text-[#FFD60A]">CompCraft</h1>
+            <h1 className="text-2xl font-black tracking-wide text-[#03b4fb]">CompCraft</h1>
             <div className="flex flex-wrap items-center gap-2">
-              <button className="rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm font-semibold text-slate-200 hover:border-[#FFC300]" onClick={() => setPage('draft')}>
+              <button className="rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm font-semibold text-slate-200 hover:border-[#03b4fb]" onClick={() => setPage('draft')}>
                 Draft
               </button>
-              <button className="rounded bg-[#FFC300] px-3 py-2 text-sm font-black text-[#000814]" onClick={() => setPage('pools')}>
+              <button className="rounded bg-[#03b4fb] px-3 py-2 text-sm font-black text-[#000814]" onClick={() => setPage('pools')}>
                 Team Pools
               </button>
               <SupabaseStatusBadge status={supabaseStatus} />
@@ -167,23 +175,23 @@ function TeamPersistenceBar({
         <label className="min-w-60 flex-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
           Team name
           <input
-            className="mt-1 w-full rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm normal-case text-slate-100 placeholder:text-slate-500 focus:border-[#FFC300] focus:outline-none"
+            className="mt-1 w-full rounded border border-[#003566] bg-[#000814] px-3 py-2 text-sm normal-case text-slate-100 placeholder:text-slate-500 focus:border-[#03b4fb] focus:outline-none"
             value={teamName}
             onChange={(event) => onTeamNameChange(event.target.value)}
             placeholder="My Team"
           />
         </label>
-        <button className="rounded bg-[#FFC300] px-4 py-2 text-sm font-black text-[#000814] hover:bg-[#FFD60A] disabled:cursor-not-allowed disabled:opacity-50" disabled={isSaving || supabaseStatus !== 'connected'} onClick={onSave}>
+        <button className="rounded bg-[#03b4fb] px-4 py-2 text-sm font-black text-[#000814] hover:bg-[#38c8ff] disabled:cursor-not-allowed disabled:opacity-50" disabled={isSaving || supabaseStatus !== 'connected'} onClick={onSave}>
           {isSaving ? 'Saving...' : 'Save Team Pools'}
         </button>
-        <button className="rounded border border-[#003566] bg-[#000814] px-4 py-2 text-sm font-semibold text-slate-200 hover:border-[#FFC300]" onClick={onReload}>
+        <button className="rounded border border-[#003566] bg-[#000814] px-4 py-2 text-sm font-semibold text-slate-200 hover:border-[#03b4fb]" onClick={onReload}>
           Reload
         </button>
       </div>
       <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400">
         <span>{teamId ? `Team ID: ${teamId}` : 'No saved team yet'}</span>
         <span>{synergyRows.toLocaleString()} synergy rows loaded</span>
-        {saveMessage && <span className="text-[#FFD60A]">{saveMessage}</span>}
+        {saveMessage && <span className="text-[#03b4fb]">{saveMessage}</span>}
       </div>
     </section>
   );

@@ -97,7 +97,8 @@ export type ChampionSynergyStatsRow = {
   id: string;
   patch: string;
   region: string;
-  queue: string;
+  queue: string | null;
+  queue_id: number | null;
   tier: string | null;
   champion_id: string | null;
   role: string;
@@ -107,6 +108,69 @@ export type ChampionSynergyStatsRow = {
   wins: number;
   win_rate: number;
   delta_vs_average: number | null;
-  source: string;
+  confidence: number;
+  source: string | null;
+  source_type: string | null;
+  updated_at: string | null;
+};
+
+export type ChampionRoleStatsRow = {
+  id: string;
+  patch: string;
+  region: string;
+  queue_id: number;
+  source_type: string;
+  champion_id: string | null;
+  role: string;
+  games: number;
+  wins: number;
+  win_rate: number;
+  confidence: number;
+  updated_at: string | null;
+};
+
+export type ChampionMatchupStatsRow = {
+  id: string;
+  patch: string;
+  region: string;
+  queue_id: number;
+  source_type: string;
+  champion_id: string | null;
+  role: string;
+  enemy_champion_id: string | null;
+  enemy_role: string;
+  matchup_type: string;
+  games: number;
+  wins: number;
+  win_rate: number;
+  delta_vs_baseline: number | null;
+  confidence: number;
+  updated_at: string | null;
+};
+
+export type TeamCompSignatureStatsRow = {
+  id: string;
+  patch: string;
+  region: string;
+  queue_id: number;
+  source_type: string;
+  signature: string;
+  has_frontline: boolean;
+  has_engage: boolean;
+  has_hard_engage: boolean;
+  has_peel: boolean;
+  has_disengage: boolean;
+  has_ap: boolean;
+  has_ad: boolean;
+  has_mixed_damage: boolean;
+  has_scaling: boolean;
+  has_poke: boolean;
+  has_dive: boolean;
+  has_pick: boolean;
+  has_waveclear: boolean;
+  games: number;
+  wins: number;
+  win_rate: number;
+  confidence: number;
   updated_at: string | null;
 };

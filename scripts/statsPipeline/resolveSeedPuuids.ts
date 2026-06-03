@@ -1,9 +1,10 @@
 import { RiotClient } from './riotClient';
-import type { RegionalRouting, RiotAccount } from './types';
+import type { RegionalRouting, RiotAccount, SynergySourceType } from './types';
 
 export type SeedRiotId = {
   gameName: string;
   tagLine: string;
+  source?: Extract<SynergySourceType, 'personal' | 'friend'>;
 };
 
 export function parseRiotId(value: string): SeedRiotId {
@@ -17,17 +18,30 @@ export function parseRiotId(value: string): SeedRiotId {
   return { gameName, tagLine };
 }
 
-export async function resolveSeedPuuids(seedRiotIds: string[], region: RegionalRouting, client = new RiotClient()) {
-  const puuids = new Set<string>();
+export type ResolvedSeedPuuid = {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  source: Extract<SynergySourceType, 'personal' | 'friend'>;
+};
+
+export async function resolveSeedPuuids(seedRiotIds: Array<string | SeedRiotId>, region: RegionalRouting, client = new RiotClient()) {
+  const byPuuid = new Map<string, ResolvedSeedPuuid>();
 
   for (const seedRiotId of seedRiotIds) {
-    const { gameName, tagLine } = parseRiotId(seedRiotId);
+    const seed = typeof seedRiotId === 'string' ? parseRiotId(seedRiotId) : seedRiotId;
+    const { gameName, tagLine } = seed;
     const account = await client.getAccountV1<RiotAccount>(
       region,
       `/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
     );
-    puuids.add(account.puuid);
+    byPuuid.set(account.puuid, {
+      puuid: account.puuid,
+      gameName: account.gameName,
+      tagLine: account.tagLine,
+      source: seed.source ?? 'friend',
+    });
   }
 
-  return [...puuids];
+  return [...byPuuid.values()];
 }

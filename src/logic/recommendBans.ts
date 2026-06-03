@@ -1,5 +1,6 @@
 import { getChampionMetadata } from '../data/championDraftMetadata';
 import type { ChampionMetadata, CompTag } from '../types/champion';
+import type { ChampionMatchupStatsRow } from '../types/database';
 import type { DraftState } from '../types/draft';
 import type { EnemyPoolEntry, Player } from '../types/player';
 import type { Recommendation } from '../types/recommendation';
@@ -25,7 +26,7 @@ const planPunishTags: Record<CompTag, { compTags: CompTag[]; threatTags: Champio
   EarlySnowball: { compTags: ['Scaling'], threatTags: ['ScalingThreat'], utilityTags: ['Peel', 'Disengage'] },
 };
 
-function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, players: Player[], enemyPools: EnemyPoolEntry[]): BanCandidate | null {
+function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, players: Player[], enemyPools: EnemyPoolEntry[], matchupStats: ChampionMatchupStatsRow[]): BanCandidate | null {
   const champion = champions.find((item) => item.id === metadata.championId);
   if (!champion) return null;
 
@@ -95,6 +96,12 @@ function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, player
   }
   if (ourPoolIds.has(metadata.championId)) risks.push('Also removes one of our playable options');
 
+  const networkThreat = scoreBanNetworkThreat(metadata, allyChampionIds, players, matchupStats);
+  if (networkThreat.score > 0) {
+    planProtectionScore += networkThreat.score;
+    reasons.push(...networkThreat.reasons);
+  }
+
   const score = clamp(Math.max(planProtectionScore, enemyComfortScore, flexBlindScore));
 
   return {
@@ -120,11 +127,11 @@ function topBy(candidates: BanCandidate[], sorter: (candidate: BanCandidate) => 
   return candidate ? { ...candidate, kind, score: clamp(sorter(candidate)) } : undefined;
 }
 
-export function recommendBans(draft: DraftState, players: Player[], enemyPools: EnemyPoolEntry[]): Recommendation[] {
+export function recommendBans(draft: DraftState, players: Player[], enemyPools: EnemyPoolEntry[], matchupStats: ChampionMatchupStatsRow[] = []): Recommendation[] {
   const unavailable = unavailableChampionIds(draft.slots);
   const candidates = champions
     .filter((champion) => !unavailable.has(champion.id))
-    .map((champion) => buildBanCandidate(getChampionMetadata(champion.id), draft, players, enemyPools))
+    .map((champion) => buildBanCandidate(getChampionMetadata(champion.id), draft, players, enemyPools, matchupStats))
     .filter((candidate): candidate is BanCandidate => Boolean(candidate));
 
   return [
@@ -132,4 +139,33 @@ export function recommendBans(draft: DraftState, players: Player[], enemyPools: 
     topBy(candidates, (candidate) => candidate.enemyComfortScore, 'Best Enemy Comfort Ban'),
     topBy(candidates, (candidate) => candidate.flexBlindScore, 'Best Flex/Blind Ban'),
   ].filter((recommendation): recommendation is BanCandidate => Boolean(recommendation));
+}
+
+function scoreBanNetworkThreat(metadata: ChampionMetadata, allyChampionIds: string[], players: Player[], matchupStats: ChampionMatchupStatsRow[]) {
+  if (matchupStats.length === 0) return { score: 0, reasons: [] as string[] };
+  let score = 0;
+  const reasons: string[] = [];
+
+  const strongIntoPickedAlly = matchupStats
+    .filter((row) => row.champion_id === metadata.championId && row.enemy_champion_id && allyChampionIds.includes(row.enemy_champion_id) && Number(row.delta_vs_baseline ?? 0) > 0)
+    .sort((a, b) => Number(b.delta_vs_baseline ?? 0) * Number(b.confidence ?? 0.15) - Number(a.delta_vs_baseline ?? 0) * Number(a.confidence ?? 0.15))[0];
+
+  if (strongIntoPickedAlly) {
+    const delta = Number(strongIntoPickedAlly.delta_vs_baseline ?? 0);
+    score += clamp(delta * 100 * 0.8 * Number(strongIntoPickedAlly.confidence ?? 0.15));
+    reasons.push(`Network stats show this can punish our ${strongIntoPickedAlly.enemy_champion_id}`);
+  }
+
+  const poolChampionIds = new Set(players.flatMap((player) => player.championPool.map((entry) => entry.championId).filter(Boolean)));
+  const poorPoolAnswer = matchupStats
+    .filter((row) => row.champion_id && poolChampionIds.has(row.champion_id) && row.enemy_champion_id === metadata.championId && Number(row.delta_vs_baseline ?? 0) < 0)
+    .sort((a, b) => Number(a.delta_vs_baseline ?? 0) * Number(a.confidence ?? 0.15) - Number(b.delta_vs_baseline ?? 0) * Number(b.confidence ?? 0.15))[0];
+
+  if (poorPoolAnswer) {
+    const delta = Math.abs(Number(poorPoolAnswer.delta_vs_baseline ?? 0));
+    score += clamp(delta * 100 * 0.5 * Number(poorPoolAnswer.confidence ?? 0.15));
+    reasons.push(`Our pool has weak network answers into this champion`);
+  }
+
+  return { score, reasons: reasons.slice(0, 2) };
 }
