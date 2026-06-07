@@ -2,17 +2,33 @@
   "name": "lol-compcraft",
   "private": true,
   "version": "0.1.0",
+  "description": "A League of Legends draft assistant for team champion pools, pick recommendations, ban recommendations, and ML-assisted draft evaluation.",
+  "author": "EdDao",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "desktop:dev": "electron .",
+    "desktop:build": "npm run build && electron-builder --win nsis",
+    "desktop:build:portable": "npm run build && electron-builder --win portable",
     "lint": "eslint .",
     "preview": "vite preview",
     "fetch:champions": "tsx scripts/fetchChampions.ts",
-    "stats:synergy": "tsx scripts/statsPipeline/runSynergyPipeline.ts",
-    "stats:personal-network": "tsx scripts/statsPipeline/runNetworkPipeline.ts personal",
-    "stats:general-network": "tsx scripts/statsPipeline/runNetworkPipeline.ts general",
-    "seed:metadata": "tsx scripts/seedChampionMetadata.ts"
+    "stats:general": "node --max-old-space-size=8192 node_modules/tsx/dist/cli.mjs scripts/statsPipeline/runNetworkCrawlOnly.ts",
+    "stats:upload": "node --max-old-space-size=8192 node_modules/tsx/dist/cli.mjs scripts/statsPipeline/uploadNetworkStatsFromCache.ts",
+    "stats:full": "node --max-old-space-size=8192 node_modules/tsx/dist/cli.mjs scripts/statsPipeline/runNetworkPipeline.ts",
+    "ml:export-training": "tsx scripts/mlPipeline/exportTrainingMatrix.ts",
+    "ml:export-network-stats": "tsx scripts/mlPipeline/exportSupabaseNetworkStats.ts",
+    "ml:upload-artifacts": "tsx scripts/mlPipeline/uploadMlArtifactsToSupabase.ts",
+    "ml:rank": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_candidate_ranker.py",
+    "ml:win-predictor": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_win_predictor.py",
+    "ml:win-experiments": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_win_predictor.py",
+    "ml:export-win-model": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_win_predictor.py --feature-sets full --validation-mode year --save-model data/ml/models/draft_win_predictor.joblib",
+    "ml:advisor": "node scripts/mlPipeline/runPythonScript.mjs server/app.py",
+    "ml:test-ranker": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/test_candidate_ranker_scenarios.py",
+    "seed:metadata": "tsx scripts/seedChampionMetadata.ts",
+    "seed:metadata:stats": "tsx scripts/seedChampionMetadataFromStats.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
@@ -26,6 +42,8 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.0",
+    "electron": "^42.3.3",
+    "electron-builder": "^26.15.0",
     "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.0",
@@ -36,5 +54,31 @@
     "typescript": "~5.8.0",
     "typescript-eslint": "^8.0.0",
     "vite": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.compcraft.lol",
+    "productName": "CompCraft",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "assets/icon.ico",
+      "package.json"
+    ],
+    "icon": "assets/icon.ico",
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

@@ -1,0 +1,11 @@
+node_modules
+dist
+release
+.git
+.venv
+venv
+env
+__pycache__
+*.pyc
+data/cache
+data/ml/oracle

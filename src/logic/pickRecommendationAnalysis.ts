@@ -1,7 +1,8 @@
 import { getChampionMetadata } from '../data/championDraftMetadata';
+import type { DraftFormat } from '../types/draft';
 import type { ChampionMetadata, CompTag } from '../types/champion';
 
-export type PickTiming = 'firstPick' | 'early' | 'middle' | 'late';
+export type PickTiming = 'firstPick' | 'responsePick' | 'early' | 'middle' | 'late';
 export type TeamNeed = 'Frontline' | 'Engage' | 'Peel' | 'APDamage' | 'ADDamage' | 'CrowdControl' | 'Waveclear' | 'Scaling' | 'EarlyPressure';
 export type DraftPlan = CompTag | 'Balanced';
 
@@ -32,8 +33,11 @@ export type EnemyCompAnalysis = {
   mainThreats: string[];
 };
 
-export function getPickTiming(allyPickCount: number): PickTiming {
+export function getPickTiming(allyPickCount: number, enemyPickCount = 0, ourSide: 'blue' | 'red' = 'blue', format: DraftFormat = 'ranked'): PickTiming {
+  if (allyPickCount === 0 && ourSide === 'red' && enemyPickCount > 0) return 'responsePick';
   if (allyPickCount === 0) return 'firstPick';
+  if (format === 'tournament' && allyPickCount >= 4) return 'late';
+  if (format === 'tournament' && allyPickCount >= 3 && enemyPickCount >= 3) return 'middle';
   if (allyPickCount <= 2) return 'early';
   if (allyPickCount <= 3) return 'middle';
   return 'late';

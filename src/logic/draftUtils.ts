@@ -6,6 +6,7 @@ const roleByPickIndex: Role[] = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
 export function createInitialDraftState(): DraftState {
   return {
     ourSide: 'blue',
+    format: 'ranked',
     slots: [
       ...Array.from({ length: 5 }, (_, index) => ({ id: `our-ban-${index + 1}`, team: 'our' as const, type: 'ban' as const, championId: null })),
       ...Array.from({ length: 5 }, (_, index) => ({ id: `enemy-ban-${index + 1}`, team: 'enemy' as const, type: 'ban' as const, championId: null })),
@@ -20,6 +21,12 @@ export function createInitialDraftState(): DraftState {
       ...Array.from({ length: 5 }, (_, index) => ({ id: `enemy-pick-${index + 1}`, team: 'enemy' as const, type: 'pick' as const, championId: null })),
     ],
   };
+}
+
+export function bannedChampionIds(slots: DraftSlot[], team?: 'our' | 'enemy'): string[] {
+  return slots
+    .filter((slot) => slot.type === 'ban' && slot.championId && (!team || slot.team === team))
+    .map((slot) => slot.championId as string);
 }
 
 export function unavailableChampionIds(slots: DraftSlot[]): Set<string> {

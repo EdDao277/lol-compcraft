@@ -1,6 +1,7 @@
 import type { Role } from './champion';
 
 export type TeamSide = 'blue' | 'red';
+export type DraftFormat = 'ranked' | 'tournament';
 export type DraftTeam = 'our' | 'enemy';
 export type DraftActionType = 'pick' | 'ban';
 
@@ -15,5 +16,6 @@ export type DraftSlot = {
 
 export type DraftState = {
   ourSide: TeamSide;
+  format: DraftFormat;
   slots: DraftSlot[];
 };

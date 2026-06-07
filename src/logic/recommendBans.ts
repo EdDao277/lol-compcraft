@@ -1,20 +1,23 @@
 import { getChampionMetadata } from '../data/championDraftMetadata';
-import type { ChampionMetadata, CompTag } from '../types/champion';
-import type { ChampionMatchupStatsRow } from '../types/database';
+import type { ChampionMetadata, CompTag, Role } from '../types/champion';
+import type { ChampionMatchupStatsRow, TeamCompSignatureStatsRow } from '../types/database';
 import type { DraftState } from '../types/draft';
 import type { EnemyPoolEntry, Player } from '../types/player';
 import type { Recommendation } from '../types/recommendation';
 import { champions } from './championData';
 import { detectDraftPlan } from './draftPlan';
 import { draftTemplates } from './draftTemplates';
-import { pickedChampionIds, unavailableChampionIds } from './draftUtils';
+import { bannedChampionIds, pickedChampionIds, unavailableChampionIds } from './draftUtils';
 import { clamp, hasAny } from './scoreTypes';
+import { scoreTeamCompSignatureStats } from './scoreTeamCompSignatureStats';
 
 type BanCandidate = Recommendation & {
   planProtectionScore: number;
   enemyComfortScore: number;
   flexBlindScore: number;
 };
+
+const roleByPickIndex: Role[] = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
 
 const planPunishTags: Record<CompTag, { compTags: CompTag[]; threatTags: ChampionMetadata['threatTags']; utilityTags: ChampionMetadata['utilityTags'] }> = {
   Pick: { compTags: [], threatTags: ['AntiEngage', 'AntiDive'], utilityTags: ['Disengage', 'Peel'] },
@@ -26,11 +29,19 @@ const planPunishTags: Record<CompTag, { compTags: CompTag[]; threatTags: Champio
   EarlySnowball: { compTags: ['Scaling'], threatTags: ['ScalingThreat'], utilityTags: ['Peel', 'Disengage'] },
 };
 
-function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, players: Player[], enemyPools: EnemyPoolEntry[], matchupStats: ChampionMatchupStatsRow[]): BanCandidate | null {
+function buildBanCandidate(
+  metadata: ChampionMetadata,
+  draft: DraftState,
+  players: Player[],
+  enemyPools: EnemyPoolEntry[],
+  matchupStats: ChampionMatchupStatsRow[],
+  teamCompSignatureStats: TeamCompSignatureStatsRow[],
+): BanCandidate | null {
   const champion = champions.find((item) => item.id === metadata.championId);
   if (!champion) return null;
 
   const allyChampionIds = pickedChampionIds(draft.slots, 'our');
+  const enemyChampionIds = pickedChampionIds(draft.slots, 'enemy');
   const allyMetas = allyChampionIds.map(getChampionMetadata);
   const plan = detectDraftPlan(allyChampionIds);
   const template = draftTemplates[plan.identity];
@@ -44,22 +55,24 @@ function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, player
   const reasons: string[] = [];
   const risks: string[] = [];
 
-  let planProtectionScore = 25;
+  const secondBanWindow = draft.format === 'tournament' && allyChampionIds.length >= 3 && enemyChampionIds.length >= 3;
+  const normalBanAfterPicks = draft.format === 'ranked' && (allyChampionIds.length > 0 || enemyChampionIds.length > 0);
+  let planProtectionScore = secondBanWindow ? 35 : normalBanAfterPicks ? 18 : 25;
   const directCounteredAlly = allyMetas.find((ally) => metadata.counters.includes(ally.championId) || ally.counteredBy.includes(metadata.championId));
   if (directCounteredAlly) {
     planProtectionScore += 28;
     reasons.push(`Directly counters our ${directCounteredAlly.championId}`);
   }
   if (hasAny(metadata.compTags, punishTags.compTags) || hasAny(metadata.threatTags, punishTags.threatTags) || hasAny(metadata.utilityTags, punishTags.utilityTags)) {
-    planProtectionScore += 35;
-    reasons.push(`Protects our ${plan.identity} plan`);
+    planProtectionScore += secondBanWindow ? 45 : 35;
+    reasons.push(secondBanWindow ? `Second-ban protection for our ${plan.identity} plan` : `Protects our ${plan.identity} plan`);
   }
   if (template.hates.counterTags.some((tag) => metadata.counterTags.includes(tag))) {
     planProtectionScore += 18;
     reasons.push(`Counters tools our ${plan.identity} draft wants to avoid`);
   }
   if (allyMissingUtility.some((tag) => metadata.utilityTags.includes(tag))) {
-    planProtectionScore += 8;
+    planProtectionScore += secondBanWindow ? 14 : 8;
     reasons.push('Punishes one of our missing pieces');
   }
   if (allyUtilityTags.includes('Frontline') && (metadata.counterTags.includes('CountersTanks') || metadata.threatTags.includes('TankKiller'))) {
@@ -102,6 +115,20 @@ function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, player
     reasons.push(...networkThreat.reasons);
   }
 
+  const enemyCompThreat = scoreTeamCompSignatureStats({
+    allyChampionIds: enemyChampionIds,
+    candidateChampionId: metadata.championId,
+    teamCompSignatureStats,
+  });
+  const enemyCompAdjustment = (enemyCompThreat.score - 50) * 0.7;
+  planProtectionScore += enemyCompAdjustment;
+  flexBlindScore += enemyCompAdjustment * 0.6;
+  if (enemyCompThreat.score > 52) {
+    reasons.push(...enemyCompThreat.reasons.map(toEnemyCompBanReason));
+  } else if (enemyCompThreat.score < 48) {
+    risks.push(...enemyCompThreat.risks.map(toEnemyCompBanRisk));
+  }
+
   const score = clamp(Math.max(planProtectionScore, enemyComfortScore, flexBlindScore));
 
   return {
@@ -122,23 +149,84 @@ function buildBanCandidate(metadata: ChampionMetadata, draft: DraftState, player
   };
 }
 
-function topBy(candidates: BanCandidate[], sorter: (candidate: BanCandidate) => number, kind: Recommendation['kind']): BanCandidate | undefined {
-  const candidate = [...candidates].sort((a, b) => sorter(b) - sorter(a))[0];
-  return candidate ? { ...candidate, kind, score: clamp(sorter(candidate)) } : undefined;
+function takeTopUnique(
+  candidates: BanCandidate[],
+  usedChampionIds: Set<string>,
+  sorter: (candidate: BanCandidate) => number,
+  kind: Recommendation['kind'],
+  limit: number,
+): BanCandidate[] {
+  const picks: BanCandidate[] = [];
+  for (const candidate of [...candidates].sort((a, b) => sorter(b) - sorter(a))) {
+    if (picks.length >= limit) break;
+    if (usedChampionIds.has(candidate.championId)) continue;
+    usedChampionIds.add(candidate.championId);
+    picks.push({ ...candidate, kind, score: clamp(sorter(candidate)) });
+  }
+  return picks;
 }
 
-export function recommendBans(draft: DraftState, players: Player[], enemyPools: EnemyPoolEntry[], matchupStats: ChampionMatchupStatsRow[] = []): Recommendation[] {
+export function recommendBans(
+  draft: DraftState,
+  players: Player[],
+  enemyPools: EnemyPoolEntry[],
+  matchupStats: ChampionMatchupStatsRow[] = [],
+  teamCompSignatureStats: TeamCompSignatureStatsRow[] = [],
+): Recommendation[] {
+  if (bannedChampionIds(draft.slots, 'our').length >= 5) return [];
+
   const unavailable = unavailableChampionIds(draft.slots);
+  const openEnemyRoles = getOpenEnemyRoles(draft);
   const candidates = champions
     .filter((champion) => !unavailable.has(champion.id))
-    .map((champion) => buildBanCandidate(getChampionMetadata(champion.id), draft, players, enemyPools, matchupStats))
+    .map((champion) => getChampionMetadata(champion.id))
+    .filter((metadata) => isEnemyRoleBanUseful(metadata, enemyPools, openEnemyRoles))
+    .map((metadata) => buildBanCandidate(metadata, draft, players, enemyPools, matchupStats, teamCompSignatureStats))
     .filter((candidate): candidate is BanCandidate => Boolean(candidate));
 
+  const usedChampionIds = new Set<string>();
+  const perCategoryLimit = getBanPerCategoryLimit(candidates.length);
   return [
-    topBy(candidates, (candidate) => candidate.planProtectionScore, 'Best Plan Protection Ban'),
-    topBy(candidates, (candidate) => candidate.enemyComfortScore, 'Best Enemy Comfort Ban'),
-    topBy(candidates, (candidate) => candidate.flexBlindScore, 'Best Flex/Blind Ban'),
-  ].filter((recommendation): recommendation is BanCandidate => Boolean(recommendation));
+    ...takeTopUnique(candidates, usedChampionIds, (candidate) => candidate.planProtectionScore, 'Best Plan Protection Ban', perCategoryLimit),
+    ...takeTopUnique(candidates, usedChampionIds, (candidate) => candidate.enemyComfortScore, 'Best Enemy Comfort Ban', perCategoryLimit),
+    ...takeTopUnique(candidates, usedChampionIds, (candidate) => candidate.flexBlindScore, 'Best Flex/Blind Ban', perCategoryLimit),
+  ];
+}
+
+function getBanPerCategoryLimit(candidateCount: number) {
+  if (candidateCount <= 4) return 1;
+  if (candidateCount <= 10) return 3;
+  if (candidateCount <= 20) return 5;
+  return 8;
+}
+
+function getOpenEnemyRoles(draft: DraftState): Set<Role> {
+  const filledRoles = new Set(
+    draft.slots
+      .filter((slot) => slot.team === 'enemy' && slot.type === 'pick' && slot.championId)
+      .map((slot) => {
+        const pickIndex = Number(slot.id.split('-').at(-1));
+        return slot.assignedRole ?? roleByPickIndex[(slot.assignedPlayerSlot ?? pickIndex) - 1];
+      })
+      .filter((role): role is Role => Boolean(role)),
+  );
+
+  return new Set(roleByPickIndex.filter((role) => !filledRoles.has(role)));
+}
+
+function isEnemyRoleBanUseful(metadata: ChampionMetadata, enemyPools: EnemyPoolEntry[], openEnemyRoles: Set<Role>) {
+  if (openEnemyRoles.size === 0) return false;
+
+  const knownEnemyPoolRoles = enemyPools.filter((entry) => entry.championId === metadata.championId).map((entry) => entry.role);
+  const candidateRoles = new Set<Role>([...metadata.roles, ...knownEnemyPoolRoles]);
+  if (candidateRoles.size === 0) return true;
+
+  return [...candidateRoles].some((role) => {
+    if (openEnemyRoles.has(role)) return true;
+    const isBotLaneChampion = role === 'ADC' || role === 'Support';
+    const enemyHasOpenBotSlot = openEnemyRoles.has('ADC') || openEnemyRoles.has('Support');
+    return isBotLaneChampion && enemyHasOpenBotSlot;
+  });
 }
 
 function scoreBanNetworkThreat(metadata: ChampionMetadata, allyChampionIds: string[], players: Player[], matchupStats: ChampionMatchupStatsRow[]) {
@@ -168,4 +256,12 @@ function scoreBanNetworkThreat(metadata: ChampionMetadata, allyChampionIds: stri
   }
 
   return { score, reasons: reasons.slice(0, 2) };
+}
+
+function toEnemyCompBanReason(reason: string) {
+  return reason.replace('Similar comp signatures', 'Enemy comp signatures').replace('after adding', 'if they add');
+}
+
+function toEnemyCompBanRisk(risk: string) {
+  return `Enemy comp-signature data lowers ban priority: ${risk.replace('Similar comp signatures', 'enemy comp signatures').replace('after adding', 'if they add')}`;
 }

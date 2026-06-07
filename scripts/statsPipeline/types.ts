@@ -53,6 +53,7 @@ export type ProcessedTeam = {
   queueId: number;
   sourceType: SynergySourceType;
   participants: ProcessedParticipant[];
+  bans?: string[];
 };
 
 export type ChampionRoleStat = {

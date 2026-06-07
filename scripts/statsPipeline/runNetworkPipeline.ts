@@ -6,15 +6,19 @@ import { crawlMatchNetwork } from './crawlMatchNetwork';
 import { loadPipelineEnv } from './env';
 import { getNetworkPipelineConfig } from './pipelineConfigs';
 import { processMatches } from './processMatches';
-import { resolveSeedPuuids } from './resolveSeedPuuids';
-import { uploadNetworkStatsToSupabase } from './uploadSynergyStatsToSupabase';
+import { resolveLadderSeedPuuids } from './resolveLadderSeedPuuids';
+import { uploadNetworkStatsToSupabase } from './uploadNetworkStatsToSupabase';
 import type { ProcessedTeam } from './types';
 
 loadPipelineEnv();
 
 async function main() {
-  const config = getNetworkPipelineConfig(process.argv[2]);
-  const seedPuuids = await resolveSeedPuuids(config.seedRiotIds, config.routingRegion);
+  const config = getNetworkPipelineConfig();
+  const seedPuuids = await resolveLadderSeedPuuids({
+    platformRegion: config.platformRegion,
+    sources: config.ladderSeedSources,
+  });
+  const processedTeams: ProcessedTeam[] = [];
   const crawl = await crawlMatchNetwork({
     seedPuuids,
     region: config.routingRegion,
@@ -25,9 +29,12 @@ async function main() {
     maxMatches: config.maxMatches,
     sourceType: config.sourceType,
     matchIdCacheTtlDays: config.matchIdCacheTtlDays,
+    collectMatches: false,
+    onMatch: ({ match, sourceType }) => {
+      processedTeams.push(...processMatches([match], { region: config.routingRegion, sourceType }));
+    },
   });
 
-  const processedTeams: ProcessedTeam[] = crawl.matches.flatMap(({ match, sourceType }) => processMatches([match], { region: config.routingRegion, sourceType }));
   const roleStats = aggregateChampionRoleStats(processedTeams);
   const synergyStats = aggregateSynergyStats({ teams: processedTeams });
   const matchupStats = aggregateChampionMatchupStats(processedTeams, roleStats);
@@ -35,11 +42,14 @@ async function main() {
   const uploaded = await uploadNetworkStatsToSupabase({ roleStats, synergyStats, matchupStats, teamCompSignatureStats });
 
   console.log(`source type: ${config.sourceType}`);
-  console.log(`seed accounts resolved: ${seedPuuids.length}`);
+  console.log(`ladder seed accounts resolved: ${seedPuuids.length}`);
+  console.log(`ladder seed sources: ${config.ladderSeedSources.length}`);
   console.log(`players visited: ${crawl.playersVisited}`);
   console.log(`match IDs collected: ${crawl.matchIdsCollected}`);
   console.log(`matches fetched from API: ${crawl.matchesFetchedFromApi}`);
   console.log(`matches loaded from cache: ${crawl.matchesLoadedFromCache}`);
+  console.log(`players skipped: ${crawl.skippedPlayers}`);
+  console.log(`matches skipped: ${crawl.skippedMatches}`);
   console.log(`matches processed: ${processedTeams.length}`);
   console.log(`champion role rows generated: ${roleStats.length}`);
   console.log(`synergy rows generated: ${synergyStats.length}`);

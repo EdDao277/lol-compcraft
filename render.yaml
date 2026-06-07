@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: compcraft-ml
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: MODEL_BUNDLE_URL
+        sync: false
+      - key: NETWORK_STATS_URL
+        sync: false

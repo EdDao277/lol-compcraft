@@ -2,6 +2,7 @@ import type { Role } from './champion';
 
 export type RecommendationKind =
   | 'Best First Pick'
+  | 'Best Response Pick'
   | 'Safest Blind Pick'
   | 'Best Flex Pick'
   | 'High Comfort Pick'
@@ -20,12 +21,19 @@ export type RecommendationKind =
 
 export type PickScoreBreakdown = {
   playerFit: number;
+  comfortScore: number;
+  ruleScore: number;
   draftPlanFit: number;
   teamNeedFit: number;
+  roleResponseFit: number;
   counterPickValue: number;
   timingValue: number;
   synergyStats: number;
   networkStats: number;
+  teamCompStats: number;
+  counterSynergyStats: number;
+  advisorScore: number;
+  predictedWinChanceGain: number;
   safetyValue: number;
   riskPenalty: number;
 };

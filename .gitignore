@@ -47,6 +47,14 @@ web_modules/
 # TypeScript cache
 *.tsbuildinfo
 
+# Python cache
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.python-version
+
 # Optional npm cache directory
 .npm
 
@@ -76,6 +84,16 @@ scripts/seedTeamBangBangGalaxy.ts
 supabase/drop_team_bang_bang_galaxy.sql
 scripts/statsPipeline/personalSynergyConfig.ts
 data/cache/
+data/ml/oracle/
+data/ml/training/
+data/ml/models/
+*.joblib
+*.pkl
+*.pickle
+*.onnx
+*.model
+*.lgb
+*.xgb
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -88,6 +106,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+release/
 .output
 
 # Gatsby files

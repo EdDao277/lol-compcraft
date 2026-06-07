@@ -1,0 +1,445 @@
+{
+  "scenarios": [
+    {
+      "name": "Blue First Pick Stable Opener",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "blue",
+      "ally": {},
+      "enemy": {},
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top", "Jungle", "Mid", "ADC", "Support"],
+      "goal": "Checks whether the ranker likes stable blind picks before either team has revealed champions.",
+      "expectedGoodTraits": ["SafeBlind", "Frontline", "Waveclear", "CrowdControl", "FlexValue"],
+      "expectedGoodChampions": ["Ornn", "Sejuani", "Ahri", "Caitlyn", "Ashe", "Nautilus"],
+      "expectedBadTraits": ["CounterpickOnly", "WeakEarly", "NeedsSetup"]
+    },
+    {
+      "name": "Red Response To Enemy First Pick ADC",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "red",
+      "ally": {},
+      "enemy": {
+        "ADC": "Jinx"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["ADC", "Support"],
+      "goal": "Checks whether red-side response logic moves bot-lane answers up after enemy reveals ADC.",
+      "expectedGoodTraits": ["BotLaneResponse", "Engage", "Peel", "LaneBully", "BacklineAccess"],
+      "expectedGoodChampions": ["Ashe", "Caitlyn", "Varus", "Nautilus", "Leona", "Milio", "Lulu"],
+      "expectedBadTraits": ["UnrelatedSoloLanePick"]
+    },
+    {
+      "name": "Enemy Jinx Lulu Scaling Bot",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "red",
+      "ally": {},
+      "enemy": {
+        "ADC": "Jinx",
+        "Support": "Lulu"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Jungle", "Mid", "ADC", "Support"],
+      "goal": "Checks whether the ranker identifies scaling front-to-back bot lanes and values engage, pick, or backline access.",
+      "expectedGoodTraits": ["HardEngage", "BacklineAccess", "Pick", "Dive", "ImmobileCarryPunish"],
+      "expectedGoodChampions": ["Vi", "Nocturne", "JarvanIV", "Nautilus", "Leona", "Ahri", "Camille"],
+      "expectedBadTraits": ["PassiveScalingOnly", "LowEngage"]
+    },
+    {
+      "name": "Enemy Heavy Dive Threat",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "blue",
+      "ally": {
+        "ADC": "Aphelios"
+      },
+      "enemy": {
+        "Top": "Camille",
+        "Jungle": "Nocturne",
+        "ADC": "Kaisa"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top", "Jungle", "Mid", "Support"],
+      "goal": "Checks whether the ranker values anti-dive, peel, and frontline when the enemy shows backline access.",
+      "expectedGoodTraits": ["Peel", "Disengage", "Frontline", "CountersDive", "PointClickCC"],
+      "expectedGoodChampions": ["Poppy", "Lulu", "Milio", "Janna", "Braum", "TahmKench", "Malphite", "Lissandra"],
+      "expectedBadTraits": ["LowPeel", "ImmobileCarryWithoutProtection"]
+    },
+    {
+      "name": "Our Team Has No Frontline",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "blue",
+      "ally": {
+        "Mid": "Ahri",
+        "ADC": "Ezreal",
+        "Support": "Karma"
+      },
+      "enemy": {
+        "Jungle": "Vi",
+        "ADC": "Kaisa"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top", "Jungle"],
+      "goal": "Checks whether missing frontline pushes tank and engage champions upward.",
+      "expectedGoodTraits": ["Frontline", "Engage", "HardEngage", "LowEconomy"],
+      "expectedGoodChampions": ["Ornn", "Malphite", "Sion", "Sejuani", "Amumu", "Zac", "Maokai", "Rell"],
+      "expectedBadTraits": ["SquishyCarryOnly"]
+    },
+    {
+      "name": "Our Team Is Too AD Heavy",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "red",
+      "ally": {
+        "Top": "Aatrox",
+        "Jungle": "JarvanIV",
+        "ADC": "Caitlyn",
+        "Support": "Pyke"
+      },
+      "enemy": {
+        "Top": "Ornn",
+        "ADC": "Ashe"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Mid"],
+      "goal": "Checks whether the ranker recognizes heavy AD drafts and prefers AP mid options.",
+      "expectedGoodTraits": ["APDamage", "Waveclear", "Scaling", "CrowdControl"],
+      "expectedGoodChampions": ["Viktor", "Syndra", "Orianna", "Ahri", "Anivia", "Azir", "Lissandra"],
+      "expectedBadTraits": ["AddsMoreAD"]
+    },
+    {
+      "name": "Protect Hypercarry ADC",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "blue",
+      "ally": {
+        "ADC": "Jinx"
+      },
+      "enemy": {
+        "Jungle": "Vi",
+        "Mid": "Ahri"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Support", "Top", "Jungle"],
+      "goal": "Checks whether hypercarry drafts value peel, frontline, and anti-engage protection.",
+      "expectedGoodTraits": ["Peel", "Shielding", "Healing", "Frontline", "CountersDive"],
+      "expectedGoodChampions": ["Lulu", "Milio", "Janna", "Braum", "TahmKench", "Ornn", "Sejuani", "Poppy"],
+      "expectedBadTraits": ["NoPeel", "NoFrontline"]
+    },
+    {
+      "name": "Tournament Second Ban Protection",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "blue",
+      "ally": {
+        "Jungle": "Vi",
+        "Mid": "Ahri",
+        "ADC": "Kaisa"
+      },
+      "enemy": {
+        "Top": "Ornn",
+        "Jungle": "Sejuani",
+        "ADC": "Aphelios"
+      },
+      "allyBans": ["Milio", "Janna"],
+      "enemyBans": ["Caitlyn", "Kalista"],
+      "candidateRoles": ["Top", "Support"],
+      "goal": "Checks whether a partially built pick/dive plan values support/top pieces that protect or complete the plan.",
+      "expectedGoodTraits": ["HardEngage", "BacklineAccess", "Frontline", "Peel", "AntiDisengage"],
+      "expectedGoodChampions": ["Nautilus", "Rell", "Leona", "Alistar", "Camille", "Malphite", "Poppy"],
+      "expectedBadTraits": ["PassivePokeOnly"]
+    },
+    {
+      "name": "Last Pick Top Into Enemy Top Jungle",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "red",
+      "ally": {
+        "Jungle": "Gragas",
+        "Mid": "Syndra",
+        "ADC": "Ashe",
+        "Support": "Rakan"
+      },
+      "enemy": {
+        "Top": "Camille",
+        "Jungle": "Nocturne",
+        "Mid": "Orianna",
+        "ADC": "Kaisa"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top"],
+      "goal": "Checks whether last-pick top values matchup answer, frontline, and anti-dive against shown solo/jungle threat.",
+      "expectedGoodTraits": ["Counterpick", "Frontline", "CountersDive", "WeakSide", "CrowdControl"],
+      "expectedGoodChampions": ["Poppy", "Malphite", "Ornn", "Shen", "Gragas", "Renekton", "Jax"],
+      "expectedBadTraits": ["BlindScalingNoPressure"]
+    },
+    {
+      "name": "Enemy Poke Siege Comp",
+      "source": "oracle-elixir-curated",
+      "format": "tournament",
+      "ourSide": "red",
+      "ally": {
+        "ADC": "Xayah"
+      },
+      "enemy": {
+        "Top": "Jayce",
+        "Mid": "Zoe",
+        "ADC": "Varus",
+        "Support": "Karma"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top", "Jungle", "Support"],
+      "goal": "Checks whether enemy poke/siege drafts push the ranker toward hard engage, sustain, or reliable start tools.",
+      "expectedGoodTraits": ["HardEngage", "Disengage", "Healing", "Shielding", "CountersPoke"],
+      "expectedGoodChampions": ["Malphite", "Ornn", "JarvanIV", "Vi", "Nocturne", "Nautilus", "Rakan", "Soraka", "Sona"],
+      "expectedBadTraits": ["ShortRangeNoEngage", "NoSustain"]
+    },
+    {
+      "name": "Rank Normal Bot Response To Jinx Braum",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1677290514",
+      "format": "rank_normal",
+      "queueId": 440,
+      "ourSide": "blue",
+      "ally": {
+        "Mid": "Akali"
+      },
+      "enemy": {
+        "ADC": "Jinx",
+        "Support": "Braum"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["ADC", "Support"],
+      "goal": "Checks whether ranked/normal response logic answers a revealed scaling ADC plus peel support with lane pressure, engage, or matching protection.",
+      "expectedGoodTraits": ["BotLaneResponse", "LaneBully", "Engage", "Peel", "Pick"],
+      "expectedGoodChampions": ["Caitlyn", "Ashe", "Varus", "Jhin", "Nautilus", "Leona", "Milio", "Lulu", "Seraphine"],
+      "expectedBadTraits": ["UnrelatedSoloLanePick", "PassiveScalingOnly"]
+    },
+    {
+      "name": "Rank Normal Need Engage Into Caitlyn Seraphine",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1677280578",
+      "format": "rank_normal",
+      "queueId": 440,
+      "ourSide": "blue",
+      "ally": {
+        "Top": "Gnar",
+        "ADC": "Draven"
+      },
+      "enemy": {
+        "ADC": "Caitlyn",
+        "Support": "Seraphine"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Jungle", "Support"],
+      "goal": "Checks whether a ranked/normal draft values hard engage when enemy bot lane shows range and sustain.",
+      "expectedGoodTraits": ["HardEngage", "Engage", "CountersPoke", "BacklineAccess", "CrowdControl"],
+      "expectedGoodChampions": ["JarvanIV", "Vi", "Nocturne", "Sejuani", "Amumu", "Nautilus", "Leona", "Rakan", "Blitzcrank"],
+      "expectedBadTraits": ["NoEngage", "LowThreatIntoPoke"]
+    },
+    {
+      "name": "Rank Normal Anti Dive For Ezreal Milio",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1679564856",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "blue",
+      "ally": {
+        "ADC": "Ezreal",
+        "Support": "Milio"
+      },
+      "enemy": {
+        "Top": "Riven",
+        "Jungle": "Warwick",
+        "Mid": "Hwei"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top", "Jungle", "Mid"],
+      "goal": "Checks whether the ranker protects a mobile poke ADC and enchanter from bruiser engage by adding frontline, peel, or control.",
+      "expectedGoodTraits": ["Frontline", "Peel", "Disengage", "PointClickCC", "CountersDive"],
+      "expectedGoodChampions": ["Poppy", "Malphite", "Ornn", "Shen", "Sejuani", "Amumu", "Lissandra", "Galio"],
+      "expectedBadTraits": ["LowFrontline", "GreedyCarryOnly"]
+    },
+    {
+      "name": "Rank Normal Answer Vi Caitlyn Mel",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1679582155",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "red",
+      "ally": {
+        "Top": "Poppy"
+      },
+      "enemy": {
+        "Jungle": "Vi",
+        "ADC": "Caitlyn",
+        "Support": "Mel"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Mid", "ADC", "Support"],
+      "goal": "Checks whether red-side ranked response values anti-engage, waveclear, and bot-lane answers into Vi plus ranged bot pressure.",
+      "expectedGoodTraits": ["Disengage", "Waveclear", "Peel", "SafeBlind", "BotLaneResponse"],
+      "expectedGoodChampions": ["Janna", "Milio", "Lulu", "Sivir", "Xayah", "Ezreal", "Viktor", "Orianna", "Anivia"],
+      "expectedBadTraits": ["LowMobilityWithoutPeel", "NoWaveclear"]
+    },
+    {
+      "name": "Rank Normal Need Backline Access Into Jhin Swain",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1681424039",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "red",
+      "ally": {
+        "Top": "Gwen"
+      },
+      "enemy": {
+        "Jungle": "Nocturne",
+        "ADC": "Jhin",
+        "Support": "Swain"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Jungle", "Mid", "Support"],
+      "goal": "Checks whether the model answers enemy long-range pick and drain support with engage, dive threat, or reliable lockdown.",
+      "expectedGoodTraits": ["BacklineAccess", "Dive", "HardEngage", "Pick", "CrowdControl"],
+      "expectedGoodChampions": ["Vi", "JarvanIV", "Nocturne", "Diana", "Ahri", "Lissandra", "Nautilus", "Leona", "Rakan"],
+      "expectedBadTraits": ["NoThreatOntoBackline"]
+    },
+    {
+      "name": "Rank Normal Scaling Mirror Needs Early Pressure",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1681431843",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "blue",
+      "ally": {
+        "Top": "Kayle",
+        "ADC": "Nilah"
+      },
+      "enemy": {
+        "ADC": "Ashe",
+        "Mid": "Leblanc"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Jungle", "Mid", "Support"],
+      "goal": "Checks whether ranked drafts with scaling lanes value early pressure, setup, and protection instead of adding more slow scaling.",
+      "expectedGoodTraits": ["EarlySnowball", "NeedsSetupAnswer", "Peel", "Engage", "CrowdControl"],
+      "expectedGoodChampions": ["LeeSin", "XinZhao", "JarvanIV", "Vi", "Nautilus", "Rakan", "Lulu", "Milio", "Ahri"],
+      "expectedBadTraits": ["MoreWeakEarlyScaling"]
+    },
+    {
+      "name": "Rank Normal Full AD Warning",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1683275908",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "red",
+      "ally": {
+        "Top": "Warwick",
+        "Jungle": "Kayn",
+        "ADC": "Draven",
+        "Support": "Swain"
+      },
+      "enemy": {
+        "Top": "DrMundo",
+        "ADC": "Varus"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Mid"],
+      "goal": "Checks whether the ranked/normal advisor fixes damage profile when the team is leaning heavily physical into durable enemies.",
+      "expectedGoodTraits": ["APDamage", "Waveclear", "Burst", "Scaling", "CrowdControl"],
+      "expectedGoodChampions": ["Viktor", "Syndra", "Orianna", "Anivia", "Ahri", "Lissandra", "Malzahar", "Hwei"],
+      "expectedBadTraits": ["AddsMoreAD", "NoWaveclear"]
+    },
+    {
+      "name": "Rank Normal Top Jungle Response To Renekton Kindred",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1681442374",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "blue",
+      "ally": {
+        "Mid": "Akshan"
+      },
+      "enemy": {
+        "Top": "Renekton",
+        "Jungle": "Kindred"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Top", "Jungle"],
+      "goal": "Checks whether shown enemy top/jungle boosts our top/jungle answers with durable lanes, reliable engage, and anti-marksman threat.",
+      "expectedGoodTraits": ["RoleResponse", "Frontline", "CrowdControl", "Counterpick", "TankKiller"],
+      "expectedGoodChampions": ["Malphite", "Ornn", "Poppy", "Jax", "Shen", "Sejuani", "Vi", "JarvanIV", "Rammus"],
+      "expectedBadTraits": ["UnrelatedBotPick", "WeakEarly"]
+    },
+    {
+      "name": "Rank Normal Answer Ashe Lux Poke Lane",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1681447822",
+      "format": "rank_normal",
+      "queueId": 400,
+      "ourSide": "blue",
+      "ally": {
+        "Top": "Fiora",
+        "Mid": "Mel"
+      },
+      "enemy": {
+        "ADC": "Ashe",
+        "Support": "Lux"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["ADC", "Support", "Jungle"],
+      "goal": "Checks whether ranked/normal bot response handles Ashe plus Lux by picking engage, sustain, or safe waveclear.",
+      "expectedGoodTraits": ["BotLaneResponse", "HardEngage", "Healing", "Shielding", "SafeBlind", "Waveclear"],
+      "expectedGoodChampions": ["Sivir", "Ezreal", "Xayah", "Nautilus", "Leona", "Rakan", "Soraka", "Nami", "JarvanIV", "Vi"],
+      "expectedBadTraits": ["ShortRangeNoEngage", "NoSustain"]
+    },
+    {
+      "name": "Rank Normal Last Pick Support For Samira",
+      "source": "riot-match-v5-cache",
+      "sourceMatchId": "LA1_1677353769",
+      "format": "rank_normal",
+      "queueId": 440,
+      "ourSide": "red",
+      "ally": {
+        "Top": "Gnar",
+        "Jungle": "Warwick",
+        "Mid": "Galio",
+        "ADC": "Samira"
+      },
+      "enemy": {
+        "Top": "DrMundo",
+        "Jungle": "Viego",
+        "Mid": "Katarina",
+        "ADC": "Smolder"
+      },
+      "allyBans": [],
+      "enemyBans": [],
+      "candidateRoles": ["Support"],
+      "goal": "Checks whether last-pick support for a Samira-style bot lane values engage setup, peel, and fight-start reliability.",
+      "expectedGoodTraits": ["HardEngage", "CrowdControl", "Peel", "Dive", "LowEconomy"],
+      "expectedGoodChampions": ["Nautilus", "Rell", "Leona", "Alistar", "Rakan", "Braum", "Thresh", "Renata"],
+      "expectedBadTraits": ["PassiveNoSetupSupport"]
+    }
+  ]
+}

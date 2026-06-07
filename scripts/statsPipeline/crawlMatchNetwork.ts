@@ -18,9 +18,11 @@ export type CrawlMatchNetworkOptions = {
   maxDepth: number;
   maxPlayers: number;
   maxMatches: number;
-  sourceType: Extract<SynergySourceType, 'personal-network' | 'general-network'>;
+  sourceType: Extract<SynergySourceType, 'general-network'>;
   matchIdCacheTtlDays?: number;
   client?: RiotClient;
+  collectMatches?: boolean;
+  onMatch?: (match: CrawledMatch) => void | Promise<void>;
 };
 
 export type CrawledMatch = {
@@ -43,6 +45,8 @@ export async function crawlMatchNetwork({
   sourceType,
   matchIdCacheTtlDays = 2,
   client = new RiotClient(),
+  collectMatches = true,
+  onMatch,
 }: CrawlMatchNetworkOptions) {
   await mkdir(matchIdCacheDir, { recursive: true });
   await mkdir(matchCacheDir, { recursive: true });
@@ -54,6 +58,8 @@ export async function crawlMatchNetwork({
   const playerFrequency = new Map<string, number>();
   let matchesFetchedFromApi = 0;
   let matchesLoadedFromCache = 0;
+  let skippedPlayers = 0;
+  let skippedMatches = 0;
 
   const frontier: FrontierItem[] = seedPuuids.map((seed) => ({
     puuid: seed.puuid,
@@ -69,25 +75,47 @@ export async function crawlMatchNetwork({
     if (!current || visitedPuuids.has(current.puuid)) continue;
 
     visitedPuuids.add(current.puuid);
-    const matchIds = await getCachedMatchIds({
-      puuid: current.puuid,
-      region,
-      queueIds,
-      count: matchesPerPlayer,
-      ttlDays: matchIdCacheTtlDays,
-      client,
-    });
+    let matchIds: string[];
+    try {
+      matchIds = await getCachedMatchIds({
+        puuid: current.puuid,
+        region,
+        queueIds,
+        count: matchesPerPlayer,
+        ttlDays: matchIdCacheTtlDays,
+        client,
+      });
+    } catch (error) {
+      if (current.depth > 0 && isSkippableRiotDataError(error)) {
+        skippedPlayers += 1;
+        console.warn(`Skipping discovered player with unreadable match history: ${current.puuid}`);
+        continue;
+      }
+      throw error;
+    }
 
     const remaining = Math.max(0, maxMatches - fetchedMatchIds.size);
     const newMatchIds = matchIds.filter((matchId) => !fetchedMatchIds.has(matchId)).slice(0, remaining);
 
     for (const matchId of newMatchIds) {
       fetchedMatchIds.add(matchId);
-      const loaded = await getCachedMatch({ matchId, region, client });
+      let loaded: { match: MatchDetail; fromCache: boolean };
+      try {
+        loaded = await getCachedMatch({ matchId, region, client });
+      } catch (error) {
+        if (isSkippableRiotDataError(error)) {
+          skippedMatches += 1;
+          console.warn(`Skipping unreadable match: ${matchId}`);
+          continue;
+        }
+        throw error;
+      }
       if (loaded.fromCache) matchesLoadedFromCache += 1;
       else matchesFetchedFromApi += 1;
 
-      crawledMatches.push({ match: loaded.match, sourceType: current.sourceType });
+      const crawledMatch = { match: loaded.match, sourceType: current.sourceType };
+      if (collectMatches) crawledMatches.push(crawledMatch);
+      await onMatch?.(crawledMatch);
       if (fetchedMatchIds.size % 100 === 0) {
         console.log(`network crawl progress: ${fetchedMatchIds.size} match IDs collected, ${visitedPuuids.size} players visited`);
       }
@@ -115,6 +143,8 @@ export async function crawlMatchNetwork({
     matchIdsCollected: fetchedMatchIds.size,
     matchesFetchedFromApi,
     matchesLoadedFromCache,
+    skippedPlayers,
+    skippedMatches,
   };
 }
 
@@ -170,4 +200,9 @@ async function isFresh(filePath: string, ttlDays: number) {
 function getPriority(depth: number, queueId: number, frequency: number) {
   const queueBonus = queueId === 420 || queueId === 440 ? 120 : queueId === 400 ? 60 : 10;
   return 700 - depth * 150 + frequency * 40 + queueBonus;
+}
+
+function isSkippableRiotDataError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('400 Bad Request') || message.includes('404 Not Found');
 }

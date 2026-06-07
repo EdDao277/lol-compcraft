@@ -18,50 +18,32 @@ export type NetworkStatsUploadPayload = {
   teamCompSignatureStats: TeamCompSignatureStat[];
 };
 
-export async function uploadSynergyStatsToSupabase(stats: ChampionSynergyStat[]) {
-  if (stats.length === 0) return 0;
-
-  const supabase = createClient(requirePipelineEnv('SUPABASE_URL'), requirePipelineEnv('SUPABASE_SERVICE_ROLE_KEY'));
-  await upsertLocalChampions(supabase);
-
-  const chunkSize = 500;
-  let uploaded = 0;
-
-  for (let index = 0; index < stats.length; index += chunkSize) {
-    const chunk = stats.slice(index, index + chunkSize).map((row) => ({
-      ...row,
-      queue_id: row.queue_id ?? Number(row.queue.split(',')[0]),
-      source_type: row.source_type ?? row.source,
-    }));
-    const { error } = await supabase.from('champion_synergy_stats').upsert(chunk, {
-      onConflict: 'patch,region,queue_id,source_type,champion_id,role,ally_champion_id,ally_role',
-    });
-
-    if (error) throw error;
-    uploaded += chunk.length;
-  }
-
-  return uploaded;
-}
-
 export async function uploadNetworkStatsToSupabase(payload: NetworkStatsUploadPayload) {
   const supabase = createClient(requirePipelineEnv('SUPABASE_URL'), requirePipelineEnv('SUPABASE_SERVICE_ROLE_KEY'));
   await upsertLocalChampions(supabase);
 
+  console.log(`uploading champion_role_stats rows: ${payload.roleStats.length}`);
   const championRoleRows = await upsertChunked(supabase, 'champion_role_stats', payload.roleStats, 'patch,region,queue_id,source_type,champion_id,role');
+  console.log(`uploaded champion_role_stats rows: ${championRoleRows}`);
+  console.log(`uploading champion_synergy_stats rows: ${payload.synergyStats.length}`);
   const synergyRows = await upsertChunked(
     supabase,
     'champion_synergy_stats',
     payload.synergyStats.map((row) => ({ ...row, source_type: row.source_type ?? row.source, source: row.source ?? row.source_type })),
     'patch,region,queue_id,source_type,champion_id,role,ally_champion_id,ally_role',
   );
+  console.log(`uploaded champion_synergy_stats rows: ${synergyRows}`);
+  console.log(`uploading champion_matchup_stats rows: ${payload.matchupStats.length}`);
   const matchupRows = await upsertChunked(
     supabase,
     'champion_matchup_stats',
     payload.matchupStats,
     'patch,region,queue_id,source_type,champion_id,role,enemy_champion_id,enemy_role,matchup_type',
   );
+  console.log(`uploaded champion_matchup_stats rows: ${matchupRows}`);
+  console.log(`uploading team_comp_signature_stats rows: ${payload.teamCompSignatureStats.length}`);
   const teamCompSignatureRows = await upsertChunked(supabase, 'team_comp_signature_stats', payload.teamCompSignatureStats, 'patch,region,queue_id,source_type,signature');
+  console.log(`uploaded team_comp_signature_stats rows: ${teamCompSignatureRows}`);
 
   return {
     championRoleRows,
@@ -80,7 +62,9 @@ async function upsertChunked(supabase: SupabaseUpsertClient, table: string, rows
     const chunk = rows.slice(index, index + chunkSize);
     if (chunk.length === 0) continue;
     const { error } = await supabase.from(table).upsert(chunk, { onConflict });
-    if (error) throw error;
+    if (error) {
+      throw new Error(`Failed to upsert ${table} rows ${index + 1}-${index + chunk.length} with conflict target "${onConflict}": ${JSON.stringify(error)}`);
+    }
     uploaded += chunk.length;
   }
 

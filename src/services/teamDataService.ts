@@ -7,6 +7,11 @@ import { createTeam, getTeams, updateTeam } from './teamService';
 const roles: Role[] = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
 const defaultTeamName = 'My Team';
 
+export type SavedTeamOption = {
+  id: string;
+  name: string;
+};
+
 export type LoadedTeamData = {
   teamId: string | null;
   teamName: string;
@@ -14,9 +19,29 @@ export type LoadedTeamData = {
   source: 'supabase' | 'mock';
 };
 
+export async function getSavedTeamOptions(): Promise<SavedTeamOption[]> {
+  const teams = await getTeams();
+  return teams.map((team) => ({ id: team.id, name: team.name }));
+}
+
 export async function loadTeamPlayersOrMock(): Promise<LoadedTeamData> {
   const teams = await getTeams();
   const team = teams[0];
+  if (!team) {
+    return {
+      teamId: null,
+      teamName: defaultTeamName,
+      players: createBlankPlayers(),
+      source: 'supabase',
+    };
+  }
+
+  return loadTeamPlayersById(team.id);
+}
+
+export async function loadTeamPlayersById(teamId: string): Promise<LoadedTeamData> {
+  const teams = await getTeams();
+  const team = teams.find((item) => item.id === teamId);
   if (!team) {
     return {
       teamId: null,
@@ -55,10 +80,9 @@ export async function loadTeamPlayersOrMock(): Promise<LoadedTeamData> {
   return { teamId: team.id, teamName: team.name, players: fillMissingRoleSlots(players), source: 'supabase' };
 }
 
-export async function saveTeamPlayersToSupabase(teamName: string, players: Player[]): Promise<LoadedTeamData | null> {
-  const teams = await getTeams();
-  const existingTeam = teams[0];
-  const team = existingTeam ? await updateTeam(existingTeam.id, { name: teamName.trim() || defaultTeamName }) : await createTeam(teamName.trim() || defaultTeamName);
+export async function saveTeamPlayersToSupabase(teamId: string | null, teamName: string, players: Player[]): Promise<LoadedTeamData | null> {
+  const normalizedTeamName = teamName.trim() || defaultTeamName;
+  const team = teamId ? await updateTeam(teamId, { name: normalizedTeamName }) : await createTeam(normalizedTeamName);
   if (!team) return null;
 
   const existingPlayers = await getPlayersByTeam(team.id);

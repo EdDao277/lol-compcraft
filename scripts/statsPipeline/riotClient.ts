@@ -1,5 +1,5 @@
 import { loadPipelineEnv, requirePipelineEnv } from './env';
-import type { RegionalRouting } from './types';
+import type { PlatformRegion, RegionalRouting } from './types';
 
 loadPipelineEnv();
 
@@ -31,7 +31,24 @@ export class RiotClient {
     return this.getRegional<T>(region, path, searchParams);
   }
 
+  async getLeagueV4<T>(region: PlatformRegion, path: string, searchParams?: Record<string, string | number | undefined>) {
+    return this.getPlatform<T>(region, path, searchParams);
+  }
+
+  async getSummonerV4<T>(region: PlatformRegion, path: string, searchParams?: Record<string, string | number | undefined>) {
+    return this.getPlatform<T>(region, path, searchParams);
+  }
+
   private async getRegional<T>(region: RegionalRouting, path: string, searchParams?: Record<string, string | number | undefined>) {
+    const url = new URL(`https://${region}.api.riotgames.com${path}`);
+    for (const [key, value] of Object.entries(searchParams ?? {})) {
+      if (value !== undefined) url.searchParams.set(key, String(value));
+    }
+
+    return this.requestJson<T>(url);
+  }
+
+  private async getPlatform<T>(region: PlatformRegion, path: string, searchParams?: Record<string, string | number | undefined>) {
     const url = new URL(`https://${region}.api.riotgames.com${path}`);
     for (const [key, value] of Object.entries(searchParams ?? {})) {
       if (value !== undefined) url.searchParams.set(key, String(value));

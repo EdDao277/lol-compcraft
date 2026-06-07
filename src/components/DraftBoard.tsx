@@ -4,10 +4,11 @@ import { getChampionMetadata } from '../data/championDraftMetadata';
 import { pickedChampionIds, unavailableChampionIds } from '../logic/draftUtils';
 import { analyzeEnemyComp, analyzeTeamComp } from '../logic/pickRecommendationAnalysis';
 import type { Role } from '../types/champion';
-import type { DraftState, DraftSlot, DraftTeam } from '../types/draft';
+import type { DraftFormat, DraftState, DraftSlot, DraftTeam } from '../types/draft';
 import type { Player } from '../types/player';
 import type { Recommendation } from '../types/recommendation';
 import type { SupabaseStatus } from '../services/supabaseStatusService';
+import type { MlAdvisorStatus } from '../services/mlAdvisorService';
 
 type Props = {
   draft: DraftState;
@@ -17,6 +18,7 @@ type Props = {
   activePage: 'draft' | 'pools';
   championsLoaded: number;
   supabaseStatus: SupabaseStatus;
+  mlAdvisorStatus: MlAdvisorStatus;
   onPageChange: (page: 'draft' | 'pools') => void;
   onChange: (draft: DraftState) => void;
   onReset: () => void;
@@ -24,7 +26,7 @@ type Props = {
 
 const fallbackRoles: Role[] = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
 
-export function DraftBoard({ draft, players, pickRecommendations, banRecommendations, activePage, championsLoaded, supabaseStatus, onPageChange, onChange, onReset }: Props) {
+export function DraftBoard({ draft, players, pickRecommendations, banRecommendations, activePage, championsLoaded, supabaseStatus, mlAdvisorStatus, onPageChange, onChange, onReset }: Props) {
   const unavailable = unavailableChampionIds(draft.slots);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(draft.slots.find((slot) => !slot.championId)?.id ?? null);
   const [slotMessage, setSlotMessage] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export function DraftBoard({ draft, players, pickRecommendations, banRecommendat
         <h1 className="text-2xl font-black tracking-wide text-[#03b4fb]">CompCraft</h1>
         <div className="flex flex-wrap items-center gap-2">
           <SideToggle side={draft.ourSide} onChange={(side) => onChange({ ...draft, ourSide: side })} />
+          <FormatToggle format={draft.format} onChange={(format) => onChange({ ...draft, format })} />
           <button className="rounded bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-600" onClick={onReset}>
             Reset draft
           </button>
@@ -72,6 +75,9 @@ export function DraftBoard({ draft, players, pickRecommendations, banRecommendat
             Team Pools
           </button>
           <span className="rounded border border-[#003566] px-3 py-2 text-sm text-slate-300">{supabaseStatus === 'connected' ? 'Supabase connected' : 'Using local data'}</span>
+          <span className={`rounded border px-3 py-2 text-sm ${mlAdvisorStatus === 'connected' ? 'border-[#03b4fb] text-[#03b4fb]' : 'border-[#003566] text-slate-400'}`}>
+            {mlAdvisorStatus === 'connected' ? 'ML advisor connected' : mlAdvisorStatus === 'checking' ? 'ML advisor checking' : 'ML advisor offline'}
+          </span>
           <span className="rounded border border-[#003566] px-3 py-2 text-sm text-slate-300">{championsLoaded} champions</span>
         </div>
       </div>
@@ -82,6 +88,24 @@ export function DraftBoard({ draft, players, pickRecommendations, banRecommendat
         <RecommendationRail title="Ban Ideas" recommendations={banRecommendations} />
       </div>
     </section>
+  );
+}
+
+function FormatToggle({ format, onChange }: { format: DraftFormat; onChange: (format: DraftFormat) => void }) {
+  const isRanked = format === 'ranked';
+  return (
+    <button
+      className="relative h-10 w-56 rounded-full border border-[#003566] bg-[#000814] p-1 text-xs font-black uppercase tracking-wide text-white"
+      onClick={() => onChange(isRanked ? 'tournament' : 'ranked')}
+      aria-label="Toggle draft format"
+      title="Toggle draft format"
+    >
+      <span className={`absolute top-1 h-8 w-[106px] rounded-full bg-[#03b4fb] transition-all ${isRanked ? 'left-1' : 'left-[113px]'}`} />
+      <span className="relative grid h-full grid-cols-2 items-center">
+        <span className={isRanked ? 'text-[#000814]' : 'text-slate-400'}>Rank/Normal</span>
+        <span className={!isRanked ? 'text-[#000814]' : 'text-slate-400'}>Tournament</span>
+      </span>
+    </button>
   );
 }
 
@@ -374,6 +398,13 @@ function getDisplayTeamName(team: DraftTeam, ourSide: DraftState['ourSide']) {
 }
 
 function RecommendationRail({ title, recommendations }: { title: string; recommendations: Recommendation[] }) {
+  if (title === 'Pick Ideas') {
+    return <CompactRecommendationRail title={title} recommendations={recommendations} tooltipSide="right" />;
+  }
+  if (title === 'Ban Ideas') {
+    return <CompactRecommendationRail title={title} recommendations={recommendations} tooltipSide="left" />;
+  }
+
   return (
     <aside className="min-h-[540px] rounded border border-[#003566] bg-[#001D3D]/45 p-3">
       <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-[#03b4fb]">{title}</h3>
@@ -401,13 +432,12 @@ function RecommendationRail({ title, recommendations }: { title: string; recomme
             )}
             {recommendation.scoreBreakdown && (
               <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] text-slate-400">
-                <span>Player {recommendation.scoreBreakdown.playerFit}</span>
-                <span>Plan {recommendation.scoreBreakdown.draftPlanFit}</span>
+                <span>Rule {recommendation.scoreBreakdown.ruleScore}</span>
+                <span>Comfort {recommendation.scoreBreakdown.comfortScore}</span>
                 <span>Need {recommendation.scoreBreakdown.teamNeedFit}</span>
-                <span>Counter {recommendation.scoreBreakdown.counterPickValue}</span>
-                <span>Timing {recommendation.scoreBreakdown.timingValue}</span>
-                <span>Stats {recommendation.scoreBreakdown.synergyStats}</span>
-                <span>Network {recommendation.scoreBreakdown.networkStats}</span>
+                <span>Counter/Stats {recommendation.scoreBreakdown.counterSynergyStats}</span>
+                <span>Comp {recommendation.scoreBreakdown.teamCompStats}</span>
+                <span>Win Gain {recommendation.scoreBreakdown.predictedWinChanceGain}</span>
                 <span>Risk -{recommendation.scoreBreakdown.riskPenalty}</span>
               </div>
             )}
@@ -431,6 +461,89 @@ function RecommendationRail({ title, recommendations }: { title: string; recomme
         ))}
       </div>
     </aside>
+  );
+}
+
+function CompactRecommendationRail({ title, recommendations, tooltipSide }: { title: string; recommendations: Recommendation[]; tooltipSide: 'left' | 'right' }) {
+  const groupedRecommendations = recommendations.reduce<Record<string, Recommendation[]>>((groups, recommendation) => {
+    groups[recommendation.kind] = [...(groups[recommendation.kind] ?? []), recommendation];
+    return groups;
+  }, {});
+
+  return (
+    <aside className="min-h-[540px] rounded border border-[#003566] bg-[#001D3D]/45 p-3">
+      <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-[#03b4fb]">{title}</h3>
+      {recommendations.length === 0 ? (
+        <p className="text-sm text-slate-500">Add your team pools to unlock recommendations.</p>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(groupedRecommendations).map(([kind, items]) => (
+            <section key={kind}>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{kind}</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {items.map((recommendation) => (
+                  <CompactRecommendationCard key={`${recommendation.id}-${recommendation.kind}`} recommendation={recommendation} tooltipSide={tooltipSide} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function CompactRecommendationCard({ recommendation, tooltipSide }: { recommendation: Recommendation; tooltipSide: 'left' | 'right' }) {
+  const tooltipPosition = tooltipSide === 'left' ? 'right-full mr-2' : 'left-full ml-2';
+
+  return (
+    <div className="group relative">
+      <div
+        className="relative rounded border border-[#003566] bg-[#000814] p-1.5 outline-none transition hover:border-[#03b4fb] focus:border-[#03b4fb]"
+        tabIndex={0}
+        aria-label={`${recommendation.championName}, ${recommendation.score} score, ${recommendation.kind}`}
+      >
+        <img className="h-10 w-10 rounded object-cover" src={recommendation.championIcon} alt={recommendation.championName} />
+        <span className="absolute -right-1 -top-1 rounded bg-[#03b4fb] px-1.5 py-0.5 text-[10px] font-black text-[#000814]">{recommendation.score}</span>
+      </div>
+      <div className={`pointer-events-none absolute top-0 z-50 hidden w-72 rounded border border-[#03b4fb] bg-[#000814] p-3 text-xs shadow-2xl shadow-black/60 group-hover:block group-focus-within:block ${tooltipPosition}`}>
+        <div className="mb-2 flex items-center gap-2">
+          <img className="h-9 w-9 rounded object-cover" src={recommendation.championIcon} alt="" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">{recommendation.championName}</p>
+            <p className="text-slate-500">
+              {recommendation.playerName} - {recommendation.role}
+            </p>
+          </div>
+          <span className="ml-auto rounded bg-[#03b4fb] px-2 py-1 text-xs font-black text-[#000814]">{recommendation.score}</span>
+        </div>
+        {recommendation.scoreBreakdown && (
+          <div className="mb-2 grid grid-cols-2 gap-1 text-[11px] text-slate-400">
+            <span>Rule {recommendation.scoreBreakdown.ruleScore}</span>
+            <span>Comfort {recommendation.scoreBreakdown.comfortScore}</span>
+            <span>Need {recommendation.scoreBreakdown.teamNeedFit}</span>
+            <span>Comp {recommendation.scoreBreakdown.teamCompStats}</span>
+            <span>Win {recommendation.scoreBreakdown.predictedWinChanceGain}</span>
+          </div>
+        )}
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#03b4fb]">Why</p>
+        <ul className="mt-1 space-y-1 text-slate-300">
+          {getDisplayReasons(recommendation).map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+        {recommendation.risks.length > 0 && !recommendation.risks.every((risk) => risk.toLowerCase().includes('no major risk') || risk.toLowerCase().includes('confirm this ban')) && (
+          <>
+            <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-red-300">Risks</p>
+            <ul className="mt-1 space-y-1 text-slate-400">
+              {recommendation.risks.slice(0, 2).map((risk) => (
+                <li key={risk}>{risk}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
