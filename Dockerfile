@@ -6,8 +6,12 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements-ml.txt .
-RUN pip install --no-cache-dir -r requirements-ml.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-ml-api.txt .
+RUN pip install --no-cache-dir -r requirements-ml-api.txt
 
 COPY server ./server
 COPY scripts ./scripts
