@@ -27,6 +27,9 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API.
         path = urlparse(self.path).path
+        if path == "/":
+            self.write_json({"ok": True, "service": "CompCraft ML advisor", "health": "/health", "predict": "/predict-draft"})
+            return
         if path == "/health":
             self.write_json({"ok": True, "model": self.predictor.status()})
             return
