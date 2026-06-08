@@ -16,5 +16,7 @@ services:
         sync: false
       - key: COACH_USE_NETWORK_STATS
         value: "false"
+      - key: MAX_BATCH_CANDIDATES
+        value: "48"
       - key: NETWORK_STATS_URL
         sync: false

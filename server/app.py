@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import gc
 import json
 import os
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -10,6 +11,7 @@ from predictor import DraftPredictor
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8787"))
+MAX_BATCH_CANDIDATES = int(os.environ.get("MAX_BATCH_CANDIDATES", "48"))
 ALLOWED_ORIGINS = {
     origin.strip()
     for origin in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
@@ -44,10 +46,16 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
         try:
             payload = self.read_json_body()
             if isinstance(payload.get("candidates"), list):
-                predictions = [self.predict_candidate(payload, candidate) for candidate in payload["candidates"]]
+                predictions = [
+                    self.predict_candidate(payload, candidate) if index < MAX_BATCH_CANDIDATES else neutral_prediction("Skipped to keep the hosted ML advisor within memory limits")
+                    for index, candidate in enumerate(payload["candidates"])
+                ]
+                gc.collect()
                 self.write_json({"predictions": predictions, "model": self.predictor.status()})
             else:
-                self.write_json(self.predictor.predict(payload))
+                prediction = self.predictor.predict(payload)
+                gc.collect()
+                self.write_json(prediction)
         except Exception as error:  # noqa: BLE001 - local dev server should report useful JSON.
             self.write_json({"error": str(error), "model": self.predictor.status()}, status=500)
 
@@ -55,19 +63,7 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
         try:
             return self.predictor.predict({**payload, "candidate": candidate})
         except Exception as error:  # noqa: BLE001 - keep one bad candidate from failing the whole batch.
-            return {
-                "available": False,
-                "neutral": True,
-                "score": 50,
-                "currentOurWinChance": 0.5,
-                "withCandidateOurWinChance": 0.5,
-                "winGain": 0,
-                "reason": f"Candidate prediction failed: {error}",
-                "winModel": {"score": 50, "winGain": 0},
-                "pickRanker": {"available": False, "score": 50, "probability": 0},
-                "enemyIntent": {"available": False, "score": 50, "probability": 0, "denialScore": 50},
-                "explanations": [],
-            }
+            return neutral_prediction(f"Candidate prediction failed: {error}")
 
     def read_json_body(self) -> dict:
         content_length = int(self.headers.get("Content-Length") or "0")
@@ -96,11 +92,27 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
         return
 
 
+def neutral_prediction(reason: str) -> dict:
+    return {
+        "available": False,
+        "neutral": True,
+        "score": 50,
+        "currentOurWinChance": 0.5,
+        "withCandidateOurWinChance": 0.5,
+        "winGain": 0,
+        "reason": reason,
+        "winModel": {"score": 50, "winGain": 0},
+        "pickRanker": {"available": False, "score": 50, "probability": 0},
+        "enemyIntent": {"available": False, "score": 50, "probability": 0, "denialScore": 50},
+        "explanations": [],
+    }
+
+
 def main() -> None:
     model_path = Path("data/ml/models/draft_win_predictor.joblib")
     print(f"CompCraft ML advisor listening on http://{HOST}:{PORT}")
     print(f"Model: {model_path} ({'found' if model_path.exists() else 'missing; neutral responses until exported'})")
-    ThreadingHTTPServer((HOST, PORT), PredictDraftHandler).serve_forever()
+    HTTPServer((HOST, PORT), PredictDraftHandler).serve_forever()
 
 
 if __name__ == "__main__":

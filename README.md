@@ -250,6 +250,7 @@ ALLOWED_ORIGINS=*
 MODEL_BUNDLE_URL=https://your-model-url
 COACH_MODEL_URL=https://your-draft-coach-url
 COACH_USE_NETWORK_STATS=false
+MAX_BATCH_CANDIDATES=48
 NETWORK_STATS_URL=https://your-network-stats-json-gz-url
 ```
 
@@ -263,7 +264,7 @@ After pushing Docker or server changes:
 4. Open `/health`.
 5. Confirm `"ready": true`.
 
-Free Render services can sleep when idle, so the first ML request after inactivity may be slow.
+Free Render services can sleep when idle, so the first ML request after inactivity may be slow. The free tier also has a small memory limit, so `COACH_USE_NETWORK_STATS=false` and `MAX_BATCH_CANDIDATES=48` keep hosted recommendations from loading duplicate stats or scoring very large candidate batches in one request.
 
 ## Local ML Advisor
 

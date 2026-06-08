@@ -24,6 +24,7 @@ type MlCandidatePayload = {
   key: string;
   championId: string;
   role: Role;
+  comfortScore: number;
   blueCompSignatureAfter: string;
   redCompSignatureAfter: string;
 };
@@ -63,6 +64,7 @@ const neutralScore: MlAdvisorScore = {
   withCandidateOurWinChance: 0.5,
   reason: 'ML advisor unavailable; using neutral score',
 };
+const maxMlCandidatesPerRequest = 40;
 
 export function getMlCandidateKey(playerId: string, championId: string, role: Role) {
   return `${playerId}-${championId}-${role}`;
@@ -160,6 +162,7 @@ function getMlCandidates(draft: DraftState, players: Player[]): MlCandidatePaylo
         key: getMlCandidateKey(player.id, entry.championId as string, entry.role),
         championId: entry.championId as string,
         role: entry.role,
+        comfortScore: entry.comfortScore,
         blueCompSignatureAfter:
           draft.ourSide === 'blue'
             ? buildTeamCompSignatureFromRoleMap({ ...ourSidePicks, [entry.role]: entry.championId as string }).signature
@@ -169,7 +172,8 @@ function getMlCandidates(draft: DraftState, players: Player[]): MlCandidatePaylo
             ? buildTeamCompSignatureFromRoleMap({ ...ourSidePicks, [entry.role]: entry.championId as string }).signature
             : buildTeamCompSignatureFromRoleMap(redPicks).signature,
       }));
-  });
+  }).sort((a, b) => b.comfortScore - a.comfortScore)
+    .slice(0, maxMlCandidatesPerRequest);
 }
 
 function getSidePicks(draft: DraftState, side: 'blue' | 'red') {
