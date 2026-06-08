@@ -70,7 +70,7 @@ const neutralScore: MlAdvisorScore = {
   withCandidateOurWinChance: 0.5,
   reason: 'ML advisor unavailable; using neutral score',
 };
-const maxMlCandidatesPerRequest = 6;
+const maxMlCandidatesPerRequest = getMlCandidateLimit();
 const predictionTimeoutMs = 25000;
 const healthTimeoutMs = 8000;
 
@@ -224,6 +224,11 @@ function getMlAdvisorEndpoint() {
   const value = import.meta.env.VITE_ML_ADVISOR_URL as string | undefined;
   if (value === 'off') return null;
   return value || 'http://127.0.0.1:8787';
+}
+
+function getMlCandidateLimit() {
+  const value = Number(import.meta.env.VITE_ML_MAX_CANDIDATES ?? 6);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 6;
 }
 
 function clampScore(value: number) {
