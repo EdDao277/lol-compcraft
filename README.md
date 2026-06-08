@@ -66,24 +66,32 @@ This means pick scores mostly ask "what should we play now?", while ban scores a
 
 ## ML Advisor
 
-The ML advisor is a Python HTTP service. The frontend calls:
+The ML advisor is a Python HTTP service. It now behaves like a small multi-model draft coach rather than only a win calculator. The frontend calls:
 
 ```text
 GET  /health
 POST /predict-draft
 ```
 
-The model currently loads:
+The service can load two model bundles:
 
 ```text
 data/ml/models/draft_win_predictor.joblib
+data/ml/models/draft_coach.joblib
 data/ml/training/supabase_network_stats.json
 ```
+
+The win predictor estimates draft outcome and candidate win-gain. The draft coach bundle adds:
+
+- Candidate Pick Ranker: estimates whether a candidate is a strong/common pick in similar global draft states.
+- Enemy Intent Model: estimates whether the opponent is likely to contest that champion, giving denial urgency.
+- Explanation Layer: converts model outputs into short recommendation reasons.
 
 For hosted deployment, those artifacts are uploaded to Supabase Storage. The hosted service reads:
 
 ```env
 MODEL_BUNDLE_URL=
+COACH_MODEL_URL=
 NETWORK_STATS_URL=
 ```
 
@@ -210,6 +218,7 @@ The script uploads:
 
 ```text
 data/ml/models/draft_win_predictor.joblib
+data/ml/models/draft_coach.joblib
 data/ml/training/supabase_network_stats.json
 ```
 
@@ -223,6 +232,7 @@ The script prints:
 
 ```env
 MODEL_BUNDLE_URL=...
+COACH_MODEL_URL=...
 NETWORK_STATS_URL=...
 ```
 
@@ -238,6 +248,7 @@ Required environment variables:
 HOST=0.0.0.0
 ALLOWED_ORIGINS=*
 MODEL_BUNDLE_URL=https://your-model-url
+COACH_MODEL_URL=https://your-draft-coach-url
 NETWORK_STATS_URL=https://your-network-stats-json-gz-url
 ```
 
@@ -259,6 +270,7 @@ If you want to run ML locally instead of Render, make sure the local model artif
 
 ```text
 data/ml/models/draft_win_predictor.joblib
+data/ml/models/draft_coach.joblib
 data/ml/training/supabase_network_stats.json
 ```
 

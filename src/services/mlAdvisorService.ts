@@ -13,6 +13,10 @@ export type MlAdvisorScore = {
   winGain: number;
   currentOurWinChance: number;
   withCandidateOurWinChance: number;
+  winModelScore?: number;
+  pickRankerScore?: number;
+  enemyDenialScore?: number;
+  explanations?: string[];
   reason?: string;
 };
 
@@ -31,6 +35,22 @@ type MlPredictionResponse = {
     winGain?: number;
     currentOurWinChance?: number;
     withCandidateOurWinChance?: number;
+    winModel?: {
+      score?: number;
+      winGain?: number;
+    };
+    pickRanker?: {
+      score?: number;
+      probability?: number;
+      rankPercentile?: number;
+    };
+    enemyIntent?: {
+      score?: number;
+      denialScore?: number;
+      probability?: number;
+      rankPercentile?: number;
+    };
+    explanations?: string[];
     reason?: string;
   }>;
 };
@@ -92,6 +112,10 @@ export async function getMlAdvisorScores(draft: DraftState, players: Player[]): 
             winGain: Number(prediction?.winGain ?? 0),
             currentOurWinChance: Number(prediction?.currentOurWinChance ?? 0.5),
             withCandidateOurWinChance: Number(prediction?.withCandidateOurWinChance ?? 0.5),
+            winModelScore: prediction?.winModel?.score,
+            pickRankerScore: prediction?.pickRanker?.score,
+            enemyDenialScore: prediction?.enemyIntent?.denialScore ?? prediction?.enemyIntent?.score,
+            explanations: prediction?.explanations ?? [],
             reason: prediction?.reason,
           },
         ];

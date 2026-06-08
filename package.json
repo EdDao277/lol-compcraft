@@ -22,6 +22,7 @@
     "ml:export-network-stats": "tsx scripts/mlPipeline/exportSupabaseNetworkStats.ts",
     "ml:upload-artifacts": "tsx scripts/mlPipeline/uploadMlArtifactsToSupabase.ts",
     "ml:rank": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_candidate_ranker.py",
+    "ml:draft-coach": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_coach.py",
     "ml:win-predictor": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_win_predictor.py",
     "ml:win-experiments": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_win_predictor.py",
     "ml:export-win-model": "node scripts/mlPipeline/runPythonScript.mjs scripts/mlPipeline/train_draft_win_predictor.py --feature-sets full --validation-mode year --save-model data/ml/models/draft_win_predictor.joblib",

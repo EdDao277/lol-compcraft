@@ -141,6 +141,7 @@ def run_validation_mode(rows: list[dict[str, Any]], args, mode: str, imports: di
 
 def import_dependencies() -> dict[str, Any]:
     try:
+        import joblib
         import numpy as np
         from sklearn.feature_extraction import DictVectorizer
         from sklearn.metrics import ndcg_score
@@ -162,6 +163,7 @@ def import_dependencies() -> dict[str, Any]:
         ) from error
 
     return {
+        "joblib": joblib,
         "np": np,
         "DictVectorizer": DictVectorizer,
         "LGBMClassifier": LGBMClassifier,

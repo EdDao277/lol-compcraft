@@ -12,5 +12,7 @@ services:
         value: "*"
       - key: MODEL_BUNDLE_URL
         sync: false
+      - key: COACH_MODEL_URL
+        sync: false
       - key: NETWORK_STATS_URL
         sync: false

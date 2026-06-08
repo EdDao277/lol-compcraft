@@ -25,6 +25,13 @@ const artifacts: ArtifactConfig[] = [
     description: 'Current CompCraft draft win predictor model bundle',
   },
   {
+    artifactKey: 'draft_coach',
+    localPath: process.env.ML_COACH_MODEL_PATH || 'data/ml/models/draft_coach.joblib',
+    storagePath: process.env.ML_COACH_MODEL_STORAGE_PATH || 'models/draft_coach.joblib',
+    contentType: 'application/octet-stream',
+    description: 'Current CompCraft draft coach bundle with pick ranker and enemy intent modules',
+  },
+  {
     artifactKey: 'supabase_network_stats',
     localPath: process.env.ML_NETWORK_STATS_PATH || 'data/ml/training/supabase_network_stats.json',
     storagePath: process.env.ML_NETWORK_STATS_STORAGE_PATH || 'training/supabase_network_stats.json.gz',
@@ -82,6 +89,7 @@ async function main() {
   console.log('');
   console.log('Use these ML API environment variables on your host:');
   console.log(`MODEL_BUNDLE_URL=${urls.draft_win_predictor}`);
+  console.log(`COACH_MODEL_URL=${urls.draft_coach}`);
   console.log(`NETWORK_STATS_URL=${urls.supabase_network_stats}`);
 }
 

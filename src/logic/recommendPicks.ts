@@ -136,7 +136,7 @@ function buildCandidate(
     ...roleResponseFit.reasons,
     ...teamNeedFit.reasons,
     ...adjustedCounterValue.reasons,
-    ...(mlAdvisorScore?.available ? [`ML advisor projects ${(mlAdvisorScore.winGain * 100).toFixed(1)}% win-chance change`] : predictedWinChanceGain.reasons),
+    ...(mlAdvisorScore?.available ? getMlAdvisorReasons(mlAdvisorScore) : predictedWinChanceGain.reasons),
     ...advisorScore.reasons,
     ...networkReasons,
     ...teamCompReasons,
@@ -194,6 +194,20 @@ function buildCandidate(
     draftPhase: timing,
     poolEntry,
   };
+}
+
+function getMlAdvisorReasons(mlAdvisorScore: NonNullable<MlAdvisorScores[string]>) {
+  const reasons = [...(mlAdvisorScore.explanations ?? [])];
+  if (reasons.length === 0) {
+    reasons.push(`ML advisor projects ${(mlAdvisorScore.winGain * 100).toFixed(1)}% win-chance change`);
+  }
+  if (mlAdvisorScore.pickRankerScore !== undefined && mlAdvisorScore.pickRankerScore >= 65) {
+    reasons.push(`Draft-coach ranker score ${mlAdvisorScore.pickRankerScore}/100`);
+  }
+  if (mlAdvisorScore.enemyDenialScore !== undefined && mlAdvisorScore.enemyDenialScore >= 65) {
+    reasons.push(`Enemy intent/denial score ${mlAdvisorScore.enemyDenialScore}/100`);
+  }
+  return reasons.slice(0, 3);
 }
 
 function takeTopUnique(candidates: PickCandidate[], usedIds: Set<string>, sorter: (candidate: PickCandidate) => number, kind: Recommendation['kind'], limit: number): PickCandidate[] {
