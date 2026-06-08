@@ -70,7 +70,7 @@ const neutralScore: MlAdvisorScore = {
   withCandidateOurWinChance: 0.5,
   reason: 'ML advisor unavailable; using neutral score',
 };
-const maxMlCandidatesPerRequest = 20;
+const maxMlCandidatesPerRequest = 6;
 const predictionTimeoutMs = 25000;
 const healthTimeoutMs = 8000;
 
