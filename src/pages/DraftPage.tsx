@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DraftBoard } from '../components/DraftBoard';
 import { EnemyPoolEditor } from '../components/EnemyPoolEditor';
 import { PlayerPoolEditor } from '../components/PlayerPoolEditor';
@@ -32,6 +32,7 @@ export function DraftPage() {
   const [networkStats, setNetworkStats] = useState<NetworkStats>({ roleStats: [], matchupStats: [], teamCompSignatureStats: [] });
   const [mlAdvisorScores, setMlAdvisorScores] = useState<MlAdvisorScores>({});
   const [mlAdvisorStatus, setMlAdvisorStatus] = useState<MlAdvisorStatus>('checking');
+  const mlAdvisorStatusRef = useRef<MlAdvisorStatus>('checking');
 
   const pickRecommendations = useMemo(
     () => recommendPicks(draft, players, enemyPools, synergyStats, networkStats.roleStats, networkStats.matchupStats, networkStats.teamCompSignatureStats, mlAdvisorScores),
@@ -90,18 +91,28 @@ export function DraftPage() {
   }, []);
 
   useEffect(() => {
+    mlAdvisorStatusRef.current = mlAdvisorStatus;
+  }, [mlAdvisorStatus]);
+
+  useEffect(() => {
     let cancelled = false;
     const refreshDelay = window.setTimeout(async () => {
-      if (!cancelled) setMlAdvisorStatus('checking');
-      const scores = await getMlAdvisorScores(draft, players);
+      if (!cancelled && mlAdvisorStatusRef.current !== 'connected') {
+        setMlAdvisorStatus('checking');
+      }
+      const result = await getMlAdvisorScores(draft, players);
       if (cancelled) return;
 
-      setMlAdvisorScores(scores);
-      if (Object.keys(scores).length === 0) {
+      setMlAdvisorScores(result.scores);
+      if (!result.hasCandidates) {
         setMlAdvisorStatus(await getMlAdvisorStatus());
         return;
       }
-      setMlAdvisorStatus(hasAvailableMlAdvisorScore(scores) ? 'connected' : 'offline');
+      if (result.ok || hasAvailableMlAdvisorScore(result.scores)) {
+        setMlAdvisorStatus('connected');
+      } else {
+        setMlAdvisorStatus('offline');
+      }
     }, 350);
 
     return () => {

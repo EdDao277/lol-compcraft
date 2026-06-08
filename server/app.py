@@ -3,6 +3,7 @@ from __future__ import annotations
 import gc
 import json
 import os
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -11,7 +12,7 @@ from predictor import DraftPredictor
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8787"))
-MAX_BATCH_CANDIDATES = int(os.environ.get("MAX_BATCH_CANDIDATES", "48"))
+MAX_BATCH_CANDIDATES = int(os.environ.get("MAX_BATCH_CANDIDATES", "24"))
 ALLOWED_ORIGINS = {
     origin.strip()
     for origin in os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
@@ -44,17 +45,24 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
             return
 
         try:
+            started_at = time.perf_counter()
             payload = self.read_json_body()
             if isinstance(payload.get("candidates"), list):
+                requested_count = len(payload["candidates"])
                 predictions = [
                     self.predict_candidate(payload, candidate) if index < MAX_BATCH_CANDIDATES else neutral_prediction("Skipped to keep the hosted ML advisor within memory limits")
                     for index, candidate in enumerate(payload["candidates"])
                 ]
                 gc.collect()
+                print(
+                    f"predict-draft candidates={requested_count} capped={min(requested_count, MAX_BATCH_CANDIDATES)} duration_ms={round((time.perf_counter() - started_at) * 1000)}",
+                    flush=True,
+                )
                 self.write_json({"predictions": predictions, "model": self.predictor.status()})
             else:
                 prediction = self.predictor.predict(payload)
                 gc.collect()
+                print(f"predict-draft single duration_ms={round((time.perf_counter() - started_at) * 1000)}", flush=True)
                 self.write_json(prediction)
         except Exception as error:  # noqa: BLE001 - local dev server should report useful JSON.
             self.write_json({"error": str(error), "model": self.predictor.status()}, status=500)
@@ -75,12 +83,15 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
 
     def write_json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_cors_headers()
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError, OSError) as error:
+            print(f"client disconnected before response was sent: {error}", flush=True)
 
     def send_cors_headers(self) -> None:
         origin = self.headers.get("Origin")
@@ -112,6 +123,7 @@ def main() -> None:
     model_path = Path("data/ml/models/draft_win_predictor.joblib")
     print(f"CompCraft ML advisor listening on http://{HOST}:{PORT}")
     print(f"Model: {model_path} ({'found' if model_path.exists() else 'missing; neutral responses until exported'})")
+    print(f"Max batch candidates: {MAX_BATCH_CANDIDATES}", flush=True)
     HTTPServer((HOST, PORT), PredictDraftHandler).serve_forever()
 
 

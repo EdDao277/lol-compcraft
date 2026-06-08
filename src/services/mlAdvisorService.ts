@@ -20,6 +20,12 @@ export type MlAdvisorScore = {
   reason?: string;
 };
 
+type MlAdvisorResult = {
+  scores: MlAdvisorScores;
+  ok: boolean;
+  hasCandidates: boolean;
+};
+
 type MlCandidatePayload = {
   key: string;
   championId: string;
@@ -65,22 +71,24 @@ const neutralScore: MlAdvisorScore = {
   reason: 'ML advisor unavailable; using neutral score',
 };
 const maxMlCandidatesPerRequest = 20;
+const predictionTimeoutMs = 25000;
+const healthTimeoutMs = 8000;
 
 export function getMlCandidateKey(playerId: string, championId: string, role: Role) {
   return `${playerId}-${championId}-${role}`;
 }
 
-export async function getMlAdvisorScores(draft: DraftState, players: Player[]): Promise<MlAdvisorScores> {
+export async function getMlAdvisorScores(draft: DraftState, players: Player[]): Promise<MlAdvisorResult> {
   const candidates = getMlCandidates(draft, players);
-  if (candidates.length === 0) return {};
+  if (candidates.length === 0) return { scores: {}, ok: true, hasCandidates: false };
 
   const endpoint = getMlAdvisorEndpoint();
-  if (!endpoint) return Object.fromEntries(candidates.map((candidate) => [candidate.key, neutralScore]));
+  if (!endpoint) return { scores: Object.fromEntries(candidates.map((candidate) => [candidate.key, neutralScore])), ok: false, hasCandidates: true };
 
   try {
     const bluePicks = getSidePicks(draft, 'blue');
     const redPicks = getSidePicks(draft, 'red');
-    const response = await fetch(`${endpoint}/predict-draft`, {
+    const response = await fetchWithTimeout(`${endpoint}/predict-draft`, predictionTimeoutMs, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -103,7 +111,7 @@ export async function getMlAdvisorScores(draft: DraftState, players: Player[]): 
     if (!response.ok) throw new Error(`ML advisor returned ${response.status}`);
     const payload = (await response.json()) as MlPredictionResponse;
     const predictions = payload.predictions ?? [];
-    return Object.fromEntries(
+    const scores = Object.fromEntries(
       candidates.map((candidate, index) => {
         const prediction = predictions[index];
         return [
@@ -123,9 +131,10 @@ export async function getMlAdvisorScores(draft: DraftState, players: Player[]): 
         ];
       }),
     );
+    return { scores, ok: hasAvailableMlAdvisorScore(scores), hasCandidates: true };
   } catch (error) {
     console.warn('ML advisor unavailable; using neutral scores.', error);
-    return Object.fromEntries(candidates.map((candidate) => [candidate.key, neutralScore]));
+    return { scores: Object.fromEntries(candidates.map((candidate) => [candidate.key, neutralScore])), ok: false, hasCandidates: true };
   }
 }
 
@@ -137,12 +146,22 @@ export async function getMlAdvisorStatus(): Promise<MlAdvisorStatus> {
   const endpoint = getMlAdvisorEndpoint();
   if (!endpoint) return 'offline';
   try {
-    const response = await fetch(`${endpoint}/health`);
+    const response = await fetchWithTimeout(`${endpoint}/health`, healthTimeoutMs);
     if (!response.ok) return 'offline';
     const payload = (await response.json()) as { model?: { ready?: boolean } };
     return payload.model?.ready ? 'connected' : 'offline';
   } catch {
     return 'offline';
+  }
+}
+
+async function fetchWithTimeout(url: string, timeoutMs: number, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 
