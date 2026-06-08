@@ -33,10 +33,11 @@ class DraftPredictor:
         self.model_path = model_path or Path(os.environ.get("MODEL_PATH", str(DEFAULT_MODEL_PATH)))
         self.coach_model_path = Path(os.environ.get("COACH_MODEL_PATH", str(DEFAULT_COACH_MODEL_PATH)))
         self.network_stats_path = Path(os.environ.get("NETWORK_STATS_PATH", str(DEFAULT_NETWORK_STATS_PATH)))
+        self.use_network_stats = os.environ.get("USE_NETWORK_STATS", "true").lower() == "true"
         self.coach_use_network_stats = os.environ.get("COACH_USE_NETWORK_STATS", "false").lower() == "true"
         self.bundle: dict[str, Any] | None = None
         self.coach_bundle: dict[str, Any] | None = None
-        self.network_stats = NetworkFeatureStore.from_path(self.network_stats_path)
+        self.network_stats = NetworkFeatureStore.from_path(self.network_stats_path) if self.use_network_stats else NetworkFeatureStore(None)
         self.coach_network_stats = coach_features.NetworkStats.from_path(self.network_stats_path) if self.coach_use_network_stats else coach_features.NetworkStats(None)
         self.load_error: str | None = None
         self.coach_load_error: str | None = None
@@ -49,7 +50,8 @@ class DraftPredictor:
     def _load(self) -> None:
         ensure_artifact(self.model_path, os.environ.get("MODEL_BUNDLE_URL"))
         ensure_artifact(self.coach_model_path, os.environ.get("COACH_MODEL_URL"))
-        ensure_artifact(self.network_stats_path, os.environ.get("NETWORK_STATS_URL"))
+        if self.use_network_stats or self.coach_use_network_stats:
+            ensure_artifact(self.network_stats_path, os.environ.get("NETWORK_STATS_URL"))
 
         if not self.model_path.exists():
             self.load_error = f"Model file not found: {self.model_path}"
@@ -59,7 +61,7 @@ class DraftPredictor:
 
                 self.bundle = joblib.load(self.model_path)
                 network_stats_path = self.network_stats_path if self.network_stats_path.exists() else Path(str(self.bundle.get("networkStatsPath") or DEFAULT_NETWORK_STATS_PATH))
-                self.network_stats = NetworkFeatureStore.from_path(network_stats_path)
+                self.network_stats = NetworkFeatureStore.from_path(network_stats_path) if self.use_network_stats else NetworkFeatureStore(None)
                 if self.coach_use_network_stats:
                     self.coach_network_stats = coach_features.NetworkStats.from_path(network_stats_path)
                 self.load_error = None
@@ -87,6 +89,7 @@ class DraftPredictor:
             "coachReady": self.coach_bundle is not None,
             "coachModelPath": str(self.coach_model_path),
             "coachError": self.coach_load_error,
+            "usesNetworkStats": self.use_network_stats,
             "coachUsesNetworkStats": self.coach_use_network_stats,
             "networkStatsPath": str(self.network_stats_path),
             "error": self.load_error,

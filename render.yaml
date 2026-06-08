@@ -14,9 +14,11 @@ services:
         sync: false
       - key: COACH_MODEL_URL
         sync: false
+      - key: USE_NETWORK_STATS
+        value: "false"
       - key: COACH_USE_NETWORK_STATS
         value: "false"
       - key: MAX_BATCH_CANDIDATES
-        value: "48"
+        value: "24"
       - key: NETWORK_STATS_URL
         sync: false

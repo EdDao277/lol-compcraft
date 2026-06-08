@@ -64,7 +64,7 @@ const neutralScore: MlAdvisorScore = {
   withCandidateOurWinChance: 0.5,
   reason: 'ML advisor unavailable; using neutral score',
 };
-const maxMlCandidatesPerRequest = 40;
+const maxMlCandidatesPerRequest = 20;
 
 export function getMlCandidateKey(playerId: string, championId: string, role: Role) {
   return `${playerId}-${championId}-${role}`;
