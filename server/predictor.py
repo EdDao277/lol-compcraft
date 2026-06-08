@@ -33,7 +33,7 @@ class DraftPredictor:
         self.model_path = model_path or Path(os.environ.get("MODEL_PATH", str(DEFAULT_MODEL_PATH)))
         self.coach_model_path = Path(os.environ.get("COACH_MODEL_PATH", str(DEFAULT_COACH_MODEL_PATH)))
         self.network_stats_path = Path(os.environ.get("NETWORK_STATS_PATH", str(DEFAULT_NETWORK_STATS_PATH)))
-        self.use_network_stats = os.environ.get("USE_NETWORK_STATS", "true").lower() == "true"
+        self.use_network_stats = os.environ.get("USE_NETWORK_STATS", "false").lower() == "true"
         self.coach_use_network_stats = os.environ.get("COACH_USE_NETWORK_STATS", "false").lower() == "true"
         self.bundle: dict[str, Any] | None = None
         self.coach_bundle: dict[str, Any] | None = None
