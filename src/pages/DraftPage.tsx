@@ -10,7 +10,7 @@ import { getSynergyStats } from '../services/championSynergyStatsService';
 import { getNetworkStats, type NetworkStats } from '../services/networkStatsService';
 import { getSupabaseStatus, type SupabaseStatus } from '../services/supabaseStatusService';
 import { createBlankPlayers, getSavedTeamOptions, loadTeamPlayersById, loadTeamPlayersOrMock, saveTeamPlayersToSupabase, type SavedTeamOption } from '../services/teamDataService';
-import { getMlAdvisorScores, getMlAdvisorStatus, type MlAdvisorScores, type MlAdvisorStatus } from '../services/mlAdvisorService';
+import { getMlAdvisorScores, getMlAdvisorStatus, hasAvailableMlAdvisorScore, type MlAdvisorScores, type MlAdvisorStatus } from '../services/mlAdvisorService';
 import type { ChampionSynergyStatsRow } from '../types/database';
 import type { DraftState } from '../types/draft';
 import type { EnemyPoolEntry, Player } from '../types/player';
@@ -75,17 +75,38 @@ export function DraftPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function refreshMlAdvisor() {
+    async function refreshMlAdvisorHealth() {
       const status = await getMlAdvisorStatus();
-      if (!cancelled) setMlAdvisorStatus(status);
-      const scores = await getMlAdvisorScores(draft, players);
-      if (!cancelled) setMlAdvisorScores(scores);
+      if (!cancelled) {
+        setMlAdvisorStatus(status);
+      }
     }
 
-    void refreshMlAdvisor();
+    void refreshMlAdvisorHealth();
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshDelay = window.setTimeout(async () => {
+      if (!cancelled) setMlAdvisorStatus('checking');
+      const scores = await getMlAdvisorScores(draft, players);
+      if (cancelled) return;
+
+      setMlAdvisorScores(scores);
+      if (Object.keys(scores).length === 0) {
+        setMlAdvisorStatus(await getMlAdvisorStatus());
+        return;
+      }
+      setMlAdvisorStatus(hasAvailableMlAdvisorScore(scores) ? 'connected' : 'offline');
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(refreshDelay);
     };
   }, [draft, players]);
 

@@ -44,12 +44,30 @@ class PredictDraftHandler(BaseHTTPRequestHandler):
         try:
             payload = self.read_json_body()
             if isinstance(payload.get("candidates"), list):
-                predictions = [self.predictor.predict({**payload, "candidate": candidate}) for candidate in payload["candidates"]]
+                predictions = [self.predict_candidate(payload, candidate) for candidate in payload["candidates"]]
                 self.write_json({"predictions": predictions, "model": self.predictor.status()})
             else:
                 self.write_json(self.predictor.predict(payload))
         except Exception as error:  # noqa: BLE001 - local dev server should report useful JSON.
             self.write_json({"error": str(error), "model": self.predictor.status()}, status=500)
+
+    def predict_candidate(self, payload: dict, candidate: dict) -> dict:
+        try:
+            return self.predictor.predict({**payload, "candidate": candidate})
+        except Exception as error:  # noqa: BLE001 - keep one bad candidate from failing the whole batch.
+            return {
+                "available": False,
+                "neutral": True,
+                "score": 50,
+                "currentOurWinChance": 0.5,
+                "withCandidateOurWinChance": 0.5,
+                "winGain": 0,
+                "reason": f"Candidate prediction failed: {error}",
+                "winModel": {"score": 50, "winGain": 0},
+                "pickRanker": {"available": False, "score": 50, "probability": 0},
+                "enemyIntent": {"available": False, "score": 50, "probability": 0, "denialScore": 50},
+                "explanations": [],
+            }
 
     def read_json_body(self) -> dict:
         content_length = int(self.headers.get("Content-Length") or "0")

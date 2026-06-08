@@ -127,6 +127,10 @@ export async function getMlAdvisorScores(draft: DraftState, players: Player[]): 
   }
 }
 
+export function hasAvailableMlAdvisorScore(scores: MlAdvisorScores) {
+  return Object.values(scores).some((score) => score.available);
+}
+
 export async function getMlAdvisorStatus(): Promise<MlAdvisorStatus> {
   const endpoint = getMlAdvisorEndpoint();
   if (!endpoint) return 'offline';
