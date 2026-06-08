@@ -14,5 +14,7 @@ services:
         sync: false
       - key: COACH_MODEL_URL
         sync: false
+      - key: COACH_USE_NETWORK_STATS
+        value: "false"
       - key: NETWORK_STATS_URL
         sync: false

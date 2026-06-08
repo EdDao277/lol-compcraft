@@ -249,6 +249,7 @@ HOST=0.0.0.0
 ALLOWED_ORIGINS=*
 MODEL_BUNDLE_URL=https://your-model-url
 COACH_MODEL_URL=https://your-draft-coach-url
+COACH_USE_NETWORK_STATS=false
 NETWORK_STATS_URL=https://your-network-stats-json-gz-url
 ```
 

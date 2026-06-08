@@ -33,10 +33,11 @@ class DraftPredictor:
         self.model_path = model_path or Path(os.environ.get("MODEL_PATH", str(DEFAULT_MODEL_PATH)))
         self.coach_model_path = Path(os.environ.get("COACH_MODEL_PATH", str(DEFAULT_COACH_MODEL_PATH)))
         self.network_stats_path = Path(os.environ.get("NETWORK_STATS_PATH", str(DEFAULT_NETWORK_STATS_PATH)))
+        self.coach_use_network_stats = os.environ.get("COACH_USE_NETWORK_STATS", "false").lower() == "true"
         self.bundle: dict[str, Any] | None = None
         self.coach_bundle: dict[str, Any] | None = None
         self.network_stats = NetworkFeatureStore.from_path(self.network_stats_path)
-        self.coach_network_stats = coach_features.NetworkStats.from_path(self.network_stats_path)
+        self.coach_network_stats = coach_features.NetworkStats.from_path(self.network_stats_path) if self.coach_use_network_stats else coach_features.NetworkStats(None)
         self.load_error: str | None = None
         self.coach_load_error: str | None = None
         self._load()
@@ -59,7 +60,8 @@ class DraftPredictor:
                 self.bundle = joblib.load(self.model_path)
                 network_stats_path = self.network_stats_path if self.network_stats_path.exists() else Path(str(self.bundle.get("networkStatsPath") or DEFAULT_NETWORK_STATS_PATH))
                 self.network_stats = NetworkFeatureStore.from_path(network_stats_path)
-                self.coach_network_stats = coach_features.NetworkStats.from_path(network_stats_path)
+                if self.coach_use_network_stats:
+                    self.coach_network_stats = coach_features.NetworkStats.from_path(network_stats_path)
                 self.load_error = None
             except Exception as error:  # noqa: BLE001 - returned to local caller for diagnostics.
                 self.bundle = None
@@ -85,6 +87,7 @@ class DraftPredictor:
             "coachReady": self.coach_bundle is not None,
             "coachModelPath": str(self.coach_model_path),
             "coachError": self.coach_load_error,
+            "coachUsesNetworkStats": self.coach_use_network_stats,
             "networkStatsPath": str(self.network_stats_path),
             "error": self.load_error,
             "featureSet": self.bundle.get("featureSet") if self.bundle else None,
